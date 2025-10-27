@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="UTF-8" />
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'"
+    />
+    <meta
+      http-equiv="X-Content-Security-Policy"
+      content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'"
+    />
+    <title>Finder</title>
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+
+      body {
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Helvetica', 'Arial', sans-serif;
+        background: transparent;
+        overflow: hidden;
+      }
+
+      .container {
+        width: 100%;
+        height: 100vh;
+        display: flex;
+        align-items: flex-start;
+        justify-content: center;
+        padding: 10px;
+        padding-top: 15vh;
+      }
+
+      .search-box {
+        width: 100%;
+        background: transparent;
+        overflow: hidden;
+      }
+
+      .search-input {
+        width: 100%;
+        padding: 20px 24px;
+        font-size: 18px;
+        border: none;
+        outline: none;
+        background: rgba(30, 30, 30, 0.95);
+        backdrop-filter: blur(20px);
+        border-radius: 0;
+        box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
+        color: #ffffff;
+        font-weight: 400;
+      }
+
+      .search-input::placeholder {
+        color: rgba(255, 255, 255, 0.5);
+      }
+
+      .search-input:focus {
+        background: rgba(30, 30, 30, 0.98);
+        box-shadow: 0 10px 40px rgba(0, 0, 0, 0.6);
+      }
+
+      .results-container {
+        max-height: 400px;
+        overflow-y: auto;
+        background: rgba(30, 30, 30, 0.95);
+        backdrop-filter: blur(20px);
+      }
+
+      .results-container::-webkit-scrollbar {
+        width: 8px;
+      }
+
+      .results-container::-webkit-scrollbar-track {
+        background: transparent;
+      }
+
+      .results-container::-webkit-scrollbar-thumb {
+        background: rgba(255, 255, 255, 0.2);
+        border-radius: 4px;
+      }
+
+      .results-container::-webkit-scrollbar-thumb:hover {
+        background: rgba(255, 255, 255, 0.3);
+      }
+
+      .result-item {
+        display: flex;
+        align-items: center;
+        padding: 12px 24px;
+        cursor: pointer;
+        transition: background 0.15s ease;
+        border-left: 3px solid transparent;
+      }
+
+      .result-item:hover,
+      .result-item.selected {
+        background: rgba(255, 255, 255, 0.1);
+        border-left-color: #4a9eff;
+      }
+
+      .result-icon {
+        width: 32px;
+        height: 32px;
+        margin-right: 16px;
+        flex-shrink: 0;
+        object-fit: contain;
+      }
+
+      .result-info {
+        flex: 1;
+        min-width: 0;
+      }
+
+      .result-name {
+        color: #ffffff;
+        font-size: 14px;
+        font-weight: 500;
+        margin-bottom: 2px;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+
+      .result-description {
+        color: rgba(255, 255, 255, 0.6);
+        font-size: 12px;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+
+      .no-results {
+        padding: 24px;
+        text-align: center;
+        color: rgba(255, 255, 255, 0.5);
+        font-size: 14px;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <div class="search-box">
+        <input
+          type="text"
+          class="search-input"
+          id="searchInput"
+          placeholder="Rechercher une application..."
+          autocomplete="off"
+          spellcheck="false"
+        />
+        <div class="results-container" id="resultsContainer">
+          <!-- Les résultats seront affichés ici -->
+        </div>
+      </div>
+    </div>
+    <script src="./renderer.js"></script>
+  </body>
+</html>
