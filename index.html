@@ -38,6 +38,7 @@
         width: 100%;
         background: transparent;
         overflow: hidden;
+        position: relative;
       }
 
       .search-input {
@@ -154,6 +155,21 @@
         pointer-events: none;
         font-weight: 400;
       }
+
+      .index-counter {
+        position: absolute;
+        top: 6px;
+        right: 10px;
+        color: rgba(255, 255, 255, 0.35);
+        font-size: 9px;
+        font-weight: 400;
+        pointer-events: none;
+        font-family: monospace;
+        z-index: 10;
+        background: rgba(30, 30, 30, 0.8);
+        padding: 3px 6px;
+        border-radius: 3px;
+      }
     </style>
   </head>
   <body>
@@ -173,6 +189,7 @@
         <div class="results-container" id="resultsContainer">
           <!-- Les résultats seront affichés ici -->
         </div>
+        <div class="index-counter" id="indexCounter">Indexation...</div>
       </div>
     </div>
     <script src="./renderer.js"></script>

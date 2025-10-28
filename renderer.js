@@ -2,6 +2,7 @@
 const searchInput = document.getElementById('searchInput')
 const resultsContainer = document.getElementById('resultsContainer')
 const calculationResultElement = document.getElementById('calculationResult')
+const indexCounter = document.getElementById('indexCounter')
 
 let allApps = []
 let allFiles = []
@@ -288,11 +289,20 @@ function parseExpression(expr) {
   return parseAddSub()
 }
 
+// Mettre à jour le compteur d'indexation
+function updateIndexCounter() {
+  const totalApps = allApps.length
+  const totalFiles = allFiles.length
+  const total = totalApps + totalFiles
+  indexCounter.textContent = `${totalApps} apps · ${totalFiles} fichiers · ${total} total`
+}
+
 // Charger toutes les applications et fichiers au démarrage
 async function loadApplications() {
   try {
     allApps = await window.electronAPI.getApplications()
     console.log(`Loaded ${allApps.length} applications`)
+    updateIndexCounter()
   } catch (error) {
     console.error('Error loading applications:', error)
   }
@@ -302,6 +312,7 @@ async function loadFiles() {
   try {
     allFiles = await window.electronAPI.getFiles()
     console.log(`Loaded ${allFiles.length} files`)
+    updateIndexCounter()
   } catch (error) {
     console.error('Error loading files:', error)
   }
