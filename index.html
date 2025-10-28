@@ -139,19 +139,37 @@
         color: rgba(255, 255, 255, 0.5);
         font-size: 14px;
       }
+
+      .search-input-wrapper {
+        position: relative;
+      }
+
+      .calculation-result {
+        position: absolute;
+        right: 24px;
+        top: 50%;
+        transform: translateY(-50%);
+        color: rgba(255, 255, 255, 0.5);
+        font-size: 18px;
+        pointer-events: none;
+        font-weight: 400;
+      }
     </style>
   </head>
   <body>
     <div class="container">
       <div class="search-box">
-        <input
-          type="text"
-          class="search-input"
-          id="searchInput"
-          placeholder="Rechercher une application..."
-          autocomplete="off"
-          spellcheck="false"
-        />
+        <div class="search-input-wrapper">
+          <input
+            type="text"
+            class="search-input"
+            id="searchInput"
+            placeholder="Rechercher une application..."
+            autocomplete="off"
+            spellcheck="false"
+          />
+          <div class="calculation-result" id="calculationResult"></div>
+        </div>
         <div class="results-container" id="resultsContainer">
           <!-- Les résultats seront affichés ici -->
         </div>

@@ -1,11 +1,13 @@
 // Focus automatiquement sur l'input au chargement
 const searchInput = document.getElementById('searchInput')
 const resultsContainer = document.getElementById('resultsContainer')
+const calculationResultElement = document.getElementById('calculationResult')
 
 let allApps = []
 let allFiles = []
 let filteredResults = []
 let selectedIndex = 0
+let calculationResult = null
 
 // Système d'icônes de fichiers
 function getFileIcon(fileName, filePath, fileType) {
@@ -159,6 +161,133 @@ function openGoogleSearch(query) {
   displayResults()
 }
 
+// Vérifier si une chaîne est une expression mathématique
+function isMathExpression(str) {
+  // Supprimer les espaces
+  const cleaned = str.trim()
+
+  // Ne doit contenir que des caractères mathématiques valides
+  const validChars = /^[\d+\-*/^()%.\s]+$/.test(cleaned)
+  if (!validChars) return false
+
+  // Doit contenir au moins un opérateur mathématique
+  const hasMathOperator = /[+\-*/^%]/.test(cleaned)
+  if (!hasMathOperator) return false
+
+  // Doit contenir au moins un chiffre
+  const hasNumbers = /\d/.test(cleaned)
+  if (!hasNumbers) return false
+
+  return cleaned.length > 0
+}
+
+// Évaluer une expression mathématique de manière sécurisée sans eval
+function evaluateMath(expression) {
+  try {
+    // Nettoyer l'expression
+    let cleaned = expression.trim().replace(/\s/g, '')
+
+    // Vérifier que l'expression ne contient que des caractères mathématiques
+    if (!/^[\d+\-*/^.()%]+$/.test(cleaned)) {
+      return null
+    }
+
+    // Parser et évaluer l'expression
+    const result = parseExpression(cleaned)
+
+    // Vérifier que le résultat est un nombre valide
+    if (typeof result === 'number' && !isNaN(result) && isFinite(result)) {
+      // Arrondir à 10 décimales pour éviter les problèmes de précision
+      return Math.round(result * 10000000000) / 10000000000
+    }
+
+    return null
+  } catch (error) {
+    console.error('Math evaluation error:', error)
+    return null
+  }
+}
+
+// Parser d'expressions mathématiques (sans eval)
+function parseExpression(expr) {
+  let pos = 0
+
+  function peek() {
+    return expr[pos]
+  }
+
+  function consume() {
+    return expr[pos++]
+  }
+
+  function parseNumber() {
+    let num = ''
+    while (pos < expr.length && (peek().match(/[\d.]/) || (peek() === '-' && num === ''))) {
+      num += consume()
+    }
+    return parseFloat(num)
+  }
+
+  function parseFactor() {
+    if (peek() === '(') {
+      consume() // (
+      const result = parseAddSub()
+      consume() // )
+      return result
+    }
+    return parseNumber()
+  }
+
+  function parsePower() {
+    let left = parseFactor()
+    while (pos < expr.length && peek() === '^') {
+      consume() // ^
+      const right = parseFactor()
+      left = Math.pow(left, right)
+    }
+    return left
+  }
+
+  function parseMulDivMod() {
+    let left = parsePower()
+    while (pos < expr.length) {
+      const op = peek()
+      if (op === '*') {
+        consume()
+        left = left * parsePower()
+      } else if (op === '/') {
+        consume()
+        left = left / parsePower()
+      } else if (op === '%') {
+        consume()
+        left = left % parsePower()
+      } else {
+        break
+      }
+    }
+    return left
+  }
+
+  function parseAddSub() {
+    let left = parseMulDivMod()
+    while (pos < expr.length) {
+      const op = peek()
+      if (op === '+') {
+        consume()
+        left = left + parseMulDivMod()
+      } else if (op === '-') {
+        consume()
+        left = left - parseMulDivMod()
+      } else {
+        break
+      }
+    }
+    return left
+  }
+
+  return parseAddSub()
+}
+
 // Charger toutes les applications et fichiers au démarrage
 async function loadApplications() {
   try {
@@ -182,9 +311,22 @@ async function loadFiles() {
 function filterResults(query) {
   if (!query.trim()) {
     filteredResults = []
+    calculationResult = null
     return
   }
 
+  // Vérifier si c'est une expression mathématique
+  if (isMathExpression(query)) {
+    const result = evaluateMath(query)
+    console.log('Math expression detected:', query, 'Result:', result)
+    if (result !== null) {
+      calculationResult = result
+      filteredResults = []
+      return
+    }
+  }
+
+  calculationResult = null
   const lowerQuery = query.toLowerCase()
   const results = []
 
@@ -224,6 +366,16 @@ function filterResults(query) {
 // Afficher les résultats
 function displayResults() {
   resultsContainer.innerHTML = ''
+
+  // Si c'est un calcul, afficher le résultat dans l'input et masquer la liste
+  if (calculationResult !== null) {
+    calculationResultElement.textContent = '= ' + calculationResult
+    resultsContainer.style.display = 'none'
+    return
+  } else {
+    calculationResultElement.textContent = ''
+    resultsContainer.style.display = 'block'
+  }
 
   if (filteredResults.length === 0) {
     if (searchInput.value.trim()) {
@@ -416,7 +568,25 @@ searchInput.addEventListener('keydown', (event) => {
     selectItem(-1)
   } else if (event.key === 'Enter') {
     event.preventDefault()
-    if (filteredResults.length > 0 && selectedIndex >= 0) {
+    if (calculationResult !== null) {
+      // Si c'est un calcul, copier le résultat dans le presse-papier
+      navigator.clipboard.writeText(calculationResult.toString()).then(() => {
+        // Remplacer l'input par le résultat brièvement pour montrer qu'il a été copié
+        searchInput.value = calculationResult.toString()
+        setTimeout(() => {
+          searchInput.value = ''
+          calculationResult = null
+          filteredResults = []
+          displayResults()
+        }, 300)
+      }).catch(() => {
+        // Si la copie échoue, juste fermer
+        searchInput.value = ''
+        calculationResult = null
+        filteredResults = []
+        displayResults()
+      })
+    } else if (filteredResults.length > 0 && selectedIndex >= 0) {
       openResult(filteredResults[selectedIndex])
     } else if (searchInput.value.trim()) {
       // Si pas de résultats mais qu'il y a une recherche, ouvrir Google
