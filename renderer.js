@@ -65,6 +65,8 @@ function removeFromHistory(index) {
   searchHistory.splice(index, 1)
   saveHistory()
   displayResults()
+  // Redonner le focus à l'input pour garder le contrôle clavier
+  searchInput.focus()
 }
 
 // Afficher l'historique des recherches
