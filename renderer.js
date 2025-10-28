@@ -109,12 +109,40 @@ function displayHistory() {
     item.appendChild(info)
     item.appendChild(deleteBtn)
 
-    // Click pour relancer la recherche
+    // Click pour ouvrir directement
     item.addEventListener('click', () => {
-      searchInput.value = entry.query
-      filterResults(entry.query)
-      displayResults()
-      searchInput.focus()
+      // Rechercher le résultat correspondant
+      const query = entry.query.toLowerCase()
+
+      // Chercher dans les apps
+      let result = allApps.find(app =>
+        app.name.toLowerCase() === query ||
+        app.name.toLowerCase().includes(query)
+      )
+
+      if (result) {
+        result = { ...result, resultType: 'app' }
+      } else {
+        // Chercher dans les fichiers
+        result = allFiles.find(file =>
+          file.name.toLowerCase() === entry.name.toLowerCase() ||
+          file.path === entry.query
+        )
+        if (result) {
+          result = { ...result, resultType: 'file' }
+        }
+      }
+
+      // Si trouvé, ouvrir directement
+      if (result) {
+        openResult(result)
+      } else {
+        // Sinon, relancer la recherche
+        searchInput.value = entry.query
+        filterResults(entry.query)
+        displayResults()
+        searchInput.focus()
+      }
     })
 
     resultsContainer.appendChild(item)
