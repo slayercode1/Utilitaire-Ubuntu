@@ -52,9 +52,9 @@ function addToHistory(query, resultType, result) {
   // Ajouter au début
   searchHistory.unshift(entry)
 
-  // Limiter à 20 entrées
-  if (searchHistory.length > 20) {
-    searchHistory = searchHistory.slice(0, 20)
+  // Limiter à 5 entrées
+  if (searchHistory.length > 5) {
+    searchHistory = searchHistory.slice(0, 5)
   }
 
   saveHistory()
@@ -73,7 +73,7 @@ function displayHistory() {
     return
   }
 
-  searchHistory.slice(0, 10).forEach((entry, index) => {
+  searchHistory.slice(0, 5).forEach((entry, index) => {
     const item = document.createElement('div')
     item.className = 'result-item history-item' + (index === selectedIndex ? ' selected' : '')
 
