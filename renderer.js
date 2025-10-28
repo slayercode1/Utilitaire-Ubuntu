@@ -9,6 +9,133 @@ let allFiles = []
 let filteredResults = []
 let selectedIndex = 0
 let calculationResult = null
+let searchHistory = []
+
+// Charger l'historique depuis localStorage
+function loadHistory() {
+  try {
+    const saved = localStorage.getItem('finderHistory')
+    if (saved) {
+      searchHistory = JSON.parse(saved)
+    }
+  } catch (error) {
+    console.error('Error loading history:', error)
+    searchHistory = []
+  }
+}
+
+// Sauvegarder l'historique dans localStorage
+function saveHistory() {
+  try {
+    localStorage.setItem('finderHistory', JSON.stringify(searchHistory))
+  } catch (error) {
+    console.error('Error saving history:', error)
+  }
+}
+
+// Ajouter une entrée à l'historique
+function addToHistory(query, resultType, result) {
+  // Ne pas ajouter les calculs ou recherches vides
+  if (!query.trim() || calculationResult !== null) return
+
+  // Créer l'entrée d'historique
+  const entry = {
+    query: query.trim(),
+    timestamp: Date.now(),
+    type: resultType,
+    name: result.name || query.trim()
+  }
+
+  // Supprimer les doublons (même query)
+  searchHistory = searchHistory.filter(h => h.query !== entry.query)
+
+  // Ajouter au début
+  searchHistory.unshift(entry)
+
+  // Limiter à 20 entrées
+  if (searchHistory.length > 20) {
+    searchHistory = searchHistory.slice(0, 20)
+  }
+
+  saveHistory()
+}
+
+// Supprimer une entrée de l'historique
+function removeFromHistory(index) {
+  searchHistory.splice(index, 1)
+  saveHistory()
+  displayResults()
+}
+
+// Afficher l'historique des recherches
+function displayHistory() {
+  if (searchHistory.length === 0) {
+    return
+  }
+
+  searchHistory.slice(0, 10).forEach((entry, index) => {
+    const item = document.createElement('div')
+    item.className = 'result-item history-item' + (index === selectedIndex ? ' selected' : '')
+
+    const icon = document.createElement('img')
+    icon.className = 'result-icon'
+    icon.src = getHistoryIcon()
+
+    const info = document.createElement('div')
+    info.className = 'result-info'
+
+    const name = document.createElement('div')
+    name.className = 'result-name'
+    name.textContent = entry.name
+
+    const description = document.createElement('div')
+    description.className = 'result-description'
+    description.textContent = getTimeAgo(entry.timestamp)
+
+    info.appendChild(name)
+    info.appendChild(description)
+
+    // Bouton de suppression
+    const deleteBtn = document.createElement('button')
+    deleteBtn.className = 'delete-history-btn'
+    deleteBtn.innerHTML = '×'
+    deleteBtn.title = 'Supprimer de l\'historique'
+    deleteBtn.addEventListener('click', (e) => {
+      e.stopPropagation()
+      removeFromHistory(index)
+    })
+
+    item.appendChild(icon)
+    item.appendChild(info)
+    item.appendChild(deleteBtn)
+
+    // Click pour relancer la recherche
+    item.addEventListener('click', () => {
+      searchInput.value = entry.query
+      filterResults(entry.query)
+      displayResults()
+      searchInput.focus()
+    })
+
+    resultsContainer.appendChild(item)
+  })
+}
+
+// Icône pour l'historique
+function getHistoryIcon() {
+  return 'data:image/svg+xml,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48"><rect width="48" height="48" fill="#666" rx="4"/><path fill="white" d="M24 10c-7.7 0-14 6.3-14 14s6.3 14 14 14 14-6.3 14-14h-4c0 5.5-4.5 10-10 10s-10-4.5-10-10 4.5-10 10-10v4l6-6-6-6v4z"/></svg>')
+}
+
+// Formater le temps écoulé
+function getTimeAgo(timestamp) {
+  const seconds = Math.floor((Date.now() - timestamp) / 1000)
+
+  if (seconds < 60) return 'À l\'instant'
+  if (seconds < 3600) return `Il y a ${Math.floor(seconds / 60)} min`
+  if (seconds < 86400) return `Il y a ${Math.floor(seconds / 3600)} h`
+  if (seconds < 604800) return `Il y a ${Math.floor(seconds / 86400)} j`
+  return `Il y a ${Math.floor(seconds / 604800)} sem`
+}
 
 // Système d'icônes de fichiers
 function getFileIcon(fileName, filePath, fileType) {
@@ -421,6 +548,9 @@ function displayResults() {
 
       resultsContainer.appendChild(googleItem)
       selectedIndex = 0
+    } else {
+      // Afficher l'historique si l'input est vide
+      displayHistory()
     }
     return
   }
@@ -524,6 +654,10 @@ function getIconPath(iconName) {
 
 // Ouvrir un résultat (application ou fichier)
 function openResult(result) {
+  // Ajouter à l'historique avant d'ouvrir
+  const query = searchInput.value
+  addToHistory(query, result.resultType, result)
+
   if (result.resultType === 'app' && result.exec) {
     window.electronAPI.launchApp(result.exec)
   } else if (result.resultType === 'file' && result.path) {
@@ -551,7 +685,9 @@ function selectItem(delta) {
 
 // Événements
 window.addEventListener('DOMContentLoaded', async () => {
+  loadHistory()
   await Promise.all([loadApplications(), loadFiles()])
+  displayResults() // Afficher l'historique au démarrage
   searchInput.focus()
 })
 

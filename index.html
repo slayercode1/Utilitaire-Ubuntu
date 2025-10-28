@@ -170,6 +170,31 @@
         padding: 3px 6px;
         border-radius: 3px;
       }
+
+      .delete-history-btn {
+        background: transparent;
+        border: none;
+        color: rgba(255, 255, 255, 0.4);
+        font-size: 24px;
+        line-height: 1;
+        cursor: pointer;
+        padding: 0 8px;
+        transition: color 0.15s ease;
+        display: none;
+      }
+
+      .history-item:hover .delete-history-btn,
+      .history-item.selected .delete-history-btn {
+        display: block;
+      }
+
+      .delete-history-btn:hover {
+        color: #ff4444;
+      }
+
+      .history-item {
+        position: relative;
+      }
     </style>
   </head>
   <body>
