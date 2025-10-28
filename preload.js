@@ -4,5 +4,7 @@ const { contextBridge, ipcRenderer } = require('electron')
 contextBridge.exposeInMainWorld('electronAPI', {
   hideWindow: () => ipcRenderer.send('hide-window'),
   getApplications: () => ipcRenderer.invoke('get-applications'),
-  launchApp: (appPath) => ipcRenderer.send('launch-app', appPath)
+  getFiles: () => ipcRenderer.invoke('get-files'),
+  launchApp: (appPath) => ipcRenderer.send('launch-app', appPath),
+  openFile: (filePath) => ipcRenderer.send('open-file', filePath)
 })

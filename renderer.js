@@ -3,10 +3,163 @@ const searchInput = document.getElementById('searchInput')
 const resultsContainer = document.getElementById('resultsContainer')
 
 let allApps = []
-let filteredApps = []
+let allFiles = []
+let filteredResults = []
 let selectedIndex = 0
 
-// Charger toutes les applications au démarrage
+// Système d'icônes de fichiers
+function getFileIcon(fileName, filePath, fileType) {
+  // Dossier en premier (avant de vérifier l'extension)
+  if (fileType === 'folder') {
+    return { type: 'icon', src: getFolderIcon() }
+  }
+
+  // Obtenir l'extension
+  const parts = fileName.split('.')
+  const ext = parts.length > 1 ? parts[parts.length - 1].toLowerCase() : ''
+
+  // Images - Preview
+  const imageExts = ['jpg', 'jpeg', 'png', 'gif', 'bmp', 'webp', 'svg', 'ico']
+  if (ext && imageExts.includes(ext)) {
+    return { type: 'image', src: 'file://' + filePath }
+  }
+
+  // Documents
+  if (ext && ['doc', 'docx', 'odt', 'rtf'].includes(ext)) {
+    return { type: 'icon', src: getDocIcon() }
+  }
+
+  // PDF
+  if (ext === 'pdf') {
+    return { type: 'icon', src: getPdfIcon() }
+  }
+
+  // Tableurs
+  if (ext && ['xls', 'xlsx', 'ods', 'csv'].includes(ext)) {
+    return { type: 'icon', src: getSpreadsheetIcon() }
+  }
+
+  // Archives
+  if (ext && ['zip', 'tar', 'gz', 'bz2', 'rar', '7z', 'xz'].includes(ext)) {
+    return { type: 'icon', src: getArchiveIcon() }
+  }
+
+  // Vidéos
+  if (ext && ['mp4', 'avi', 'mkv', 'mov', 'wmv', 'webm', 'flv'].includes(ext)) {
+    return { type: 'icon', src: getVideoIcon() }
+  }
+
+  // Audio
+  if (ext && ['mp3', 'wav', 'flac', 'ogg', 'aac', 'm4a'].includes(ext)) {
+    return { type: 'icon', src: getAudioIcon() }
+  }
+
+  // Code
+  const codeColors = {
+    'js': ['JS', '#f7df1e'],
+    'ts': ['TS', '#3178c6'],
+    'jsx': ['JSX', '#61dafb'],
+    'tsx': ['TSX', '#3178c6'],
+    'py': ['PY', '#3776ab'],
+    'java': ['JAVA', '#007396'],
+    'c': ['C', '#555555'],
+    'cpp': ['C++', '#00599c'],
+    'cc': ['C++', '#00599c'],
+    'cxx': ['C++', '#00599c'],
+    'h': ['H', '#555555'],
+    'hpp': ['HPP', '#00599c'],
+    'hxx': ['HXX', '#00599c'],
+    'rs': ['RS', '#ce422b'],
+    'go': ['GO', '#00add8'],
+    'rb': ['RB', '#cc342d'],
+    'php': ['PHP', '#777bb4'],
+    'html': ['HTML', '#e34c26'],
+    'htm': ['HTM', '#e34c26'],
+    'css': ['CSS', '#264de4'],
+    'scss': ['SCSS', '#cc6699'],
+    'sass': ['SASS', '#cc6699'],
+    'less': ['LESS', '#1d365d'],
+    'json': ['JSON', '#292929'],
+    'xml': ['XML', '#ff6600'],
+    'md': ['MD', '#083fa1'],
+    'markdown': ['MD', '#083fa1'],
+    'sh': ['SH', '#4eaa25'],
+    'bash': ['BASH', '#4eaa25'],
+    'zsh': ['ZSH', '#4eaa25'],
+    'yml': ['YML', '#cb171e'],
+    'yaml': ['YAML', '#cb171e'],
+    'toml': ['TOML', '#9c4121'],
+    'ini': ['INI', '#6d8086'],
+    'conf': ['CONF', '#6d8086'],
+    'dart': ['DART', '#0175c2'],
+    'kt': ['KT', '#7f52ff'],
+    'swift': ['SWIFT', '#fa7343'],
+    'vue': ['VUE', '#42b883'],
+    'svelte': ['SVELTE', '#ff3e00'],
+    'sql': ['SQL', '#f29111'],
+    'r': ['R', '#276dc3'],
+    'lua': ['LUA', '#000080'],
+    'pl': ['PERL', '#39457e'],
+    'scala': ['SCALA', '#dc322f']
+  }
+
+  if (ext && codeColors[ext]) {
+    return { type: 'icon', src: getCodeIcon(codeColors[ext][0], codeColors[ext][1]) }
+  }
+
+  return { type: 'icon', src: getGenericFileIcon() }
+}
+
+function getDocIcon() {
+  return 'data:image/svg+xml,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48"><rect width="48" height="48" fill="#2b579a" rx="4"/><text x="24" y="30" text-anchor="middle" fill="white" font-size="10" font-weight="bold">DOC</text></svg>')
+}
+
+function getPdfIcon() {
+  return 'data:image/svg+xml,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48"><rect width="48" height="48" fill="#f40f02" rx="4"/><text x="24" y="30" text-anchor="middle" fill="white" font-size="10" font-weight="bold">PDF</text></svg>')
+}
+
+function getSpreadsheetIcon() {
+  return 'data:image/svg+xml,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48"><rect width="48" height="48" fill="#217346" rx="4"/><text x="24" y="30" text-anchor="middle" fill="white" font-size="10" font-weight="bold">XLS</text></svg>')
+}
+
+function getArchiveIcon() {
+  return 'data:image/svg+xml,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48"><rect width="48" height="48" fill="#7e7e7e" rx="4"/><text x="24" y="30" text-anchor="middle" fill="white" font-size="10" font-weight="bold">ZIP</text></svg>')
+}
+
+function getVideoIcon() {
+  return 'data:image/svg+xml,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48"><rect width="48" height="48" fill="#ff4444" rx="4"/><polygon points="18,14 32,24 18,34" fill="white"/></svg>')
+}
+
+function getAudioIcon() {
+  return 'data:image/svg+xml,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48"><rect width="48" height="48" fill="#9c27b0" rx="4"/><circle cx="20" cy="28" r="4" fill="white"/><rect x="24" y="12" width="2" height="16" fill="white"/></svg>')
+}
+
+function getCodeIcon(label, color) {
+  return 'data:image/svg+xml,' + encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48"><rect width="48" height="48" fill="${color}" rx="4"/><text x="24" y="30" text-anchor="middle" fill="white" font-size="10" font-weight="bold">${label}</text></svg>`)
+}
+
+function getFolderIcon() {
+  return 'data:image/svg+xml,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48"><path fill="#ffa726" d="M10 12h14l4 4h14v20H10z"/><path fill="#ffb74d" d="M10 16h32v20H10z"/></svg>')
+}
+
+function getGenericFileIcon() {
+  return 'data:image/svg+xml,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48"><rect width="48" height="48" fill="#90a4ae" rx="4"/><path fill="white" d="M14 10h14l6 6v22H14z" opacity="0.9"/></svg>')
+}
+
+function getGoogleIcon() {
+  return 'data:image/svg+xml,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48"><rect width="48" height="48" fill="#4285f4" rx="4"/><path fill="white" d="M24 20v5h7.5c-.3 1.6-1.9 4.7-7.5 4.7-4.5 0-8.2-3.7-8.2-8.2s3.7-8.2 8.2-8.2c2.6 0 4.3 1.1 5.3 2l4-3.9C30.8 9.2 27.7 8 24 8c-7.7 0-14 6.3-14 14s6.3 14 14 14c8.1 0 13.5-5.7 13.5-13.7 0-.9-.1-1.6-.2-2.3H24z"/></svg>')
+}
+
+function openGoogleSearch(query) {
+  const searchUrl = `https://www.google.com/search?q=${encodeURIComponent(query)}`
+  window.electronAPI.openFile(searchUrl)
+
+  searchInput.value = ''
+  filteredResults = []
+  displayResults()
+}
+
+// Charger toutes les applications et fichiers au démarrage
 async function loadApplications() {
   try {
     allApps = await window.electronAPI.getApplications()
@@ -16,19 +169,55 @@ async function loadApplications() {
   }
 }
 
-// Filtrer les applications selon la recherche
-function filterApps(query) {
+async function loadFiles() {
+  try {
+    allFiles = await window.electronAPI.getFiles()
+    console.log(`Loaded ${allFiles.length} files`)
+  } catch (error) {
+    console.error('Error loading files:', error)
+  }
+}
+
+// Filtrer les applications et fichiers selon la recherche
+function filterResults(query) {
   if (!query.trim()) {
-    filteredApps = []
+    filteredResults = []
     return
   }
 
   const lowerQuery = query.toLowerCase()
-  filteredApps = allApps.filter(app => {
+  const results = []
+
+  // Filtrer les applications
+  const apps = allApps.filter(app => {
     return app.name.toLowerCase().includes(lowerQuery) ||
            (app.description && app.description.toLowerCase().includes(lowerQuery))
-  }).slice(0, 10) // Limiter à 10 résultats
+  }).map(app => ({
+    ...app,
+    resultType: 'app',
+    score: app.name.toLowerCase().startsWith(lowerQuery) ? 2 : 1
+  }))
 
+  // Filtrer les fichiers
+  const files = allFiles.filter(file => {
+    return file.name.toLowerCase().includes(lowerQuery)
+  }).map(file => ({
+    ...file,
+    resultType: 'file',
+    score: file.name.toLowerCase().startsWith(lowerQuery) ? 2 : 1
+  }))
+
+  // Combiner et trier par score (apps en premier si score égal)
+  results.push(...apps, ...files)
+  results.sort((a, b) => {
+    if (b.score !== a.score) return b.score - a.score
+    if (a.resultType === 'app' && b.resultType !== 'app') return -1
+    if (a.resultType !== 'app' && b.resultType === 'app') return 1
+    return 0
+  })
+
+  // Limiter à 10 résultats
+  filteredResults = results.slice(0, 10)
   selectedIndex = 0
 }
 
@@ -36,14 +225,44 @@ function filterApps(query) {
 function displayResults() {
   resultsContainer.innerHTML = ''
 
-  if (filteredApps.length === 0) {
+  if (filteredResults.length === 0) {
     if (searchInput.value.trim()) {
-      resultsContainer.innerHTML = '<div class="no-results">Aucune application trouvée</div>'
+      // Créer une option de recherche Google
+      const googleItem = document.createElement('div')
+      googleItem.className = 'result-item google-search selected'
+
+      const icon = document.createElement('img')
+      icon.className = 'result-icon'
+      icon.src = getGoogleIcon()
+
+      const info = document.createElement('div')
+      info.className = 'result-info'
+
+      const name = document.createElement('div')
+      name.className = 'result-name'
+      name.textContent = 'Rechercher sur Google'
+
+      const description = document.createElement('div')
+      description.className = 'result-description'
+      description.textContent = `"${searchInput.value}"`
+
+      info.appendChild(name)
+      info.appendChild(description)
+
+      googleItem.appendChild(icon)
+      googleItem.appendChild(info)
+
+      googleItem.addEventListener('click', () => {
+        openGoogleSearch(searchInput.value)
+      })
+
+      resultsContainer.appendChild(googleItem)
+      selectedIndex = 0
     }
     return
   }
 
-  filteredApps.forEach((app, index) => {
+  filteredResults.forEach((result, index) => {
     const item = document.createElement('div')
     item.className = 'result-item' + (index === selectedIndex ? ' selected' : '')
 
@@ -51,14 +270,37 @@ function displayResults() {
     const icon = document.createElement('img')
     icon.className = 'result-icon'
 
-    if (app.iconPath) {
-      icon.src = 'file://' + app.iconPath
+    if (result.resultType === 'app') {
+      // Icône d'application
+      if (result.iconPath) {
+        icon.src = 'file://' + result.iconPath
+      } else {
+        icon.src = getIconPath(result.icon)
+      }
+      icon.onerror = () => {
+        icon.src = 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><rect width="24" height="24" fill="%23555"/><text x="12" y="16" text-anchor="middle" fill="white" font-size="10">?</text></svg>'
+      }
     } else {
-      icon.src = getIconPath(app.icon)
-    }
+      // Icône de fichier ou dossier avec le système d'icônes personnalisées
+      const fileIconInfo = getFileIcon(result.name, result.path, result.type)
 
-    icon.onerror = () => {
-      icon.src = 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><rect width="24" height="24" fill="%23555"/><text x="12" y="16" text-anchor="middle" fill="white" font-size="10">?</text></svg>'
+      console.log('File:', result.name, 'Type:', result.type, 'IconType:', fileIconInfo.type)
+
+      icon.src = fileIconInfo.src
+
+      // Pour les images, ajouter un style pour l'affichage en preview
+      if (fileIconInfo.type === 'image') {
+        icon.style.objectFit = 'cover'
+        icon.onerror = () => {
+          // Si l'image ne charge pas, afficher une icône générique
+          icon.src = 'data:image/svg+xml,' + encodeURIComponent(`
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48">
+              <rect width="48" height="48" fill="#4caf50" rx="4"/>
+              <text x="24" y="30" text-anchor="middle" fill="white" font-size="10" font-weight="bold">IMG</text>
+            </svg>
+          `)
+        }
+      }
     }
 
     // Créer les infos
@@ -67,11 +309,16 @@ function displayResults() {
 
     const name = document.createElement('div')
     name.className = 'result-name'
-    name.textContent = app.name
+    name.textContent = result.name
 
     const description = document.createElement('div')
     description.className = 'result-description'
-    description.textContent = app.description || 'Aucune description'
+
+    if (result.resultType === 'app') {
+      description.textContent = result.description || 'Application'
+    } else {
+      description.textContent = result.path
+    }
 
     info.appendChild(name)
     info.appendChild(description)
@@ -79,9 +326,9 @@ function displayResults() {
     item.appendChild(icon)
     item.appendChild(info)
 
-    // Click pour lancer
+    // Click pour ouvrir
     item.addEventListener('click', () => {
-      launchApp(app)
+      openResult(result)
     })
 
     resultsContainer.appendChild(item)
@@ -112,21 +359,24 @@ function getIconPath(iconName) {
   return 'file://' + iconPaths[0]
 }
 
-// Lancer une application
-function launchApp(app) {
-  if (app && app.exec) {
-    window.electronAPI.launchApp(app.exec)
-    searchInput.value = ''
-    filteredApps = []
-    displayResults()
+// Ouvrir un résultat (application ou fichier)
+function openResult(result) {
+  if (result.resultType === 'app' && result.exec) {
+    window.electronAPI.launchApp(result.exec)
+  } else if (result.resultType === 'file' && result.path) {
+    window.electronAPI.openFile(result.path)
   }
+
+  searchInput.value = ''
+  filteredResults = []
+  displayResults()
 }
 
 // Navigation au clavier
 function selectItem(delta) {
-  if (filteredApps.length === 0) return
+  if (filteredResults.length === 0) return
 
-  selectedIndex = (selectedIndex + delta + filteredApps.length) % filteredApps.length
+  selectedIndex = (selectedIndex + delta + filteredResults.length) % filteredResults.length
   displayResults()
 
   // Scroller pour que l'élément sélectionné soit visible
@@ -138,7 +388,7 @@ function selectItem(delta) {
 
 // Événements
 window.addEventListener('DOMContentLoaded', async () => {
-  await loadApplications()
+  await Promise.all([loadApplications(), loadFiles()])
   searchInput.focus()
 })
 
@@ -148,14 +398,14 @@ window.addEventListener('focus', () => {
 })
 
 searchInput.addEventListener('input', () => {
-  filterApps(searchInput.value)
+  filterResults(searchInput.value)
   displayResults()
 })
 
 searchInput.addEventListener('keydown', (event) => {
   if (event.key === 'Escape') {
     searchInput.value = ''
-    filteredApps = []
+    filteredResults = []
     displayResults()
     window.electronAPI.hideWindow()
   } else if (event.key === 'ArrowDown') {
@@ -166,8 +416,11 @@ searchInput.addEventListener('keydown', (event) => {
     selectItem(-1)
   } else if (event.key === 'Enter') {
     event.preventDefault()
-    if (filteredApps.length > 0 && selectedIndex >= 0) {
-      launchApp(filteredApps[selectedIndex])
+    if (filteredResults.length > 0 && selectedIndex >= 0) {
+      openResult(filteredResults[selectedIndex])
+    } else if (searchInput.value.trim()) {
+      // Si pas de résultats mais qu'il y a une recherche, ouvrir Google
+      openGoogleSearch(searchInput.value)
     }
   }
 })

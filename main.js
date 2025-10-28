@@ -2,11 +2,12 @@ const { app, BrowserWindow, globalShortcut, ipcMain } = require('electron/main')
 const path = require('node:path')
 const { spawn } = require('child_process')
 const { scanApplications } = require('./appScanner')
+const { scanFiles } = require('./fileScanner')
 
 let win = null
 
 const createWindow = () => {
-  win = new BrowserWindow({
+  const options = {
     width: 600,
     height: 500,
     frame: false,
@@ -20,10 +21,24 @@ const createWindow = () => {
       contextIsolation: true,
       nodeIntegration: false
     }
-  })
+  }
+
+  // Sur Linux, utiliser le type 'notification' pour éviter la taskbar
+  if (process.platform === 'linux') {
+    options.type = 'notification'
+  }
+
+  win = new BrowserWindow(options)
 
   // Définir le type de fenêtre après création pour éviter l'erreur
   win.setSkipTaskbar(true)
+
+  // Sur Linux, forcer le comportement sans taskbar
+  if (process.platform === 'linux') {
+    win.once('ready-to-show', () => {
+      win.setSkipTaskbar(true)
+    })
+  }
 
   win.loadFile('index.html')
 
@@ -61,6 +76,8 @@ const toggleWindow = () => {
     const y = Math.floor(height * 0.15)
 
     win.setPosition(x, y)
+    // Forcer skipTaskbar avant d'afficher
+    win.setSkipTaskbar(true)
     win.show()
     win.focus()
   }
@@ -79,6 +96,11 @@ app.whenReady().then(() => {
   // Gérer la récupération des applications
   ipcMain.handle('get-applications', async () => {
     return scanApplications()
+  })
+
+  // Gérer la récupération des fichiers
+  ipcMain.handle('get-files', async () => {
+    return scanFiles()
   })
 
   // Gérer le lancement d'application
@@ -108,6 +130,33 @@ app.whenReady().then(() => {
       }
 
       // Cacher la fenêtre après le lancement
+      if (win) {
+        win.hide()
+      }
+    }
+  })
+
+  // Gérer l'ouverture de fichiers/dossiers
+  ipcMain.on('open-file', (event, filePath) => {
+    if (filePath) {
+      console.log('Opening file:', filePath)
+
+      const wrappedCommand = `nohup xdg-open "${filePath}" > /dev/null 2>&1 &`
+
+      try {
+        const child = spawn('sh', ['-c', wrappedCommand], {
+          detached: true,
+          stdio: 'ignore'
+        })
+
+        child.unref()
+
+        console.log('File opened successfully')
+      } catch (error) {
+        console.error('Error opening file:', error)
+      }
+
+      // Cacher la fenêtre après l'ouverture
       if (win) {
         win.hide()
       }
