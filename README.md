@@ -45,12 +45,36 @@ Une application de recherche type **Spotlight** pour Linux, construite avec Elec
 
 ## 📦 Installation
 
-### Prérequis
+### Installation rapide (utilisateurs)
+
+**Pour Ubuntu/Debian :**
+
+1. **Télécharger le fichier `.deb`** depuis les [releases](https://github.com/votre-nom/finder/releases)
+
+2. **Installer le package** :
+```bash
+sudo dpkg -i finder_1.0.0_amd64.deb
+```
+
+3. **C'est tout !** 🎉
+   - L'application se lance automatiquement en arrière-plan
+   - Appuyez sur **`Alt + Space`** pour l'utiliser
+
+**Désinstallation :**
+```bash
+sudo apt remove finder
+```
+
+---
+
+### Installation pour développeurs
+
+#### Prérequis
 - Node.js (v16 ou supérieur)
 - npm ou yarn
 - Linux (Ubuntu, Debian, Fedora, Arch, etc.)
 
-### Installation
+#### Étapes
 
 1. **Cloner le dépôt**
 ```bash
@@ -63,12 +87,12 @@ cd finder
 npm install
 ```
 
-3. **Lancer l'application**
+3. **Lancer en mode développement**
 ```bash
 npm start
 ```
 
-### Construction de l'application
+#### Construction de l'application
 
 Pour créer un package distribuable :
 
@@ -76,8 +100,14 @@ Pour créer un package distribuable :
 # Créer un .deb (Debian/Ubuntu)
 npm run make
 
-# Les fichiers seront dans ./out/make/
+# Les fichiers seront dans ./out/make/deb/x64/
 ```
+
+**Le package .deb inclut :**
+- ✅ L'application Finder
+- ✅ Configuration autostart (lancement automatique)
+- ✅ Fichier .desktop pour le menu d'applications
+- ✅ Toutes les dépendances
 
 ## 🎮 Utilisation
 

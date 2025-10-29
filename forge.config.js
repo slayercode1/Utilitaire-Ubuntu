@@ -8,20 +8,21 @@ module.exports = {
   rebuildConfig: {},
   makers: [
     {
-      name: '@electron-forge/maker-squirrel',
-      config: {},
-    },
-    {
       name: '@electron-forge/maker-zip',
-      platforms: ['darwin'],
+      platforms: ['linux'],
     },
     {
       name: '@electron-forge/maker-deb',
-      config: {},
-    },
-    {
-      name: '@electron-forge/maker-rpm',
-      config: {},
+      config: {
+        options: {
+          maintainer: 'Finder Team',
+          homepage: 'https://github.com/yourusername/finder',
+          description: 'Application de recherche type Spotlight pour Linux',
+          categories: ['Utility'],
+          section: 'utils',
+          priority: 'optional'
+        }
+      },
     },
   ],
   plugins: [
