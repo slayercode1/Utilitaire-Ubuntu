@@ -238,6 +238,25 @@ function setupIpcHandlers() {
       win.hide()
     }
   })
+
+  // Exécuter une commande dans un terminal
+  ipcMain.on('execute-command', (_event, command) => {
+    if (!command) return
+
+    console.log('Executing command in terminal:', command)
+
+    // Ouvrir dans x-terminal-emulator avec la commande
+    // Le terminal reste ouvert après exécution pour voir les résultats
+    const escapedCommand = command.replace(/"/g, '\\"')
+    const wrappedCommand = `nohup x-terminal-emulator -e "bash -c '${escapedCommand}; echo; echo Appuyez sur Entrée pour fermer...; read'" > /dev/null 2>&1 &`
+
+    launchDetachedProcess(wrappedCommand, 'Command in terminal')
+
+    // Cacher la fenêtre après l'ouverture
+    if (win) {
+      win.hide()
+    }
+  })
 }
 
 // === INITIALISATION DE L'APPLICATION ===

@@ -52,5 +52,11 @@ contextBridge.exposeInMainWorld('electronAPI', {
    * Ouvre un script shell (.sh) dans un terminal
    * @param {string} filePath - Chemin absolu du script shell
    */
-  openInTerminal: (filePath) => ipcRenderer.send('open-in-terminal', filePath)
+  openInTerminal: (filePath) => ipcRenderer.send('open-in-terminal', filePath),
+
+  /**
+   * Exécute une commande shell dans un terminal
+   * @param {string} command - Commande à exécuter
+   */
+  executeCommand: (command) => ipcRenderer.send('execute-command', command)
 })

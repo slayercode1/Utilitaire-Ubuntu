@@ -69,9 +69,52 @@ function removeFromHistory(index) {
   searchInput.focus()
 }
 
+// Afficher les snippets disponibles
+function displaySnippets() {
+  const snippets = [
+    { symbol: '.', name: 'Applications', description: 'Rechercher uniquement les applications' },
+    { symbol: '?', name: 'Fichiers', description: 'Rechercher uniquement les fichiers et dossiers' },
+    { symbol: '??', name: 'Web', description: 'Rechercher directement sur Google' },
+    { symbol: '>', name: 'Commande', description: 'Exécuter une commande shell' },
+    { symbol: 'to', name: 'Conversion', description: 'Convertir unités et devises (ex: 10$ to eur)' }
+  ]
+
+  snippets.forEach((snippet) => {
+    const item = document.createElement('div')
+    item.className = 'result-item snippet-item'
+    item.style.cssText = 'cursor: default; opacity: 0.8;'
+
+    const icon = document.createElement('div')
+    icon.className = 'snippet-symbol'
+    icon.textContent = snippet.symbol
+    icon.style.cssText = 'width: 48px; height: 48px; display: flex; align-items: center; justify-content: center; color: #888; font-weight: bold; font-size: 20px; flex-shrink: 0;'
+
+    const info = document.createElement('div')
+    info.className = 'result-info'
+
+    const name = document.createElement('div')
+    name.className = 'result-name'
+    name.textContent = snippet.name
+
+    const description = document.createElement('div')
+    description.className = 'result-description'
+    description.textContent = snippet.description
+
+    info.appendChild(name)
+    info.appendChild(description)
+
+    item.appendChild(icon)
+    item.appendChild(info)
+
+    resultsContainer.appendChild(item)
+  })
+}
+
 // Afficher l'historique des recherches
 function displayHistory() {
   if (searchHistory.length === 0) {
+    // Si pas d'historique, afficher les snippets
+    displaySnippets()
     return
   }
 
@@ -310,6 +353,14 @@ function getGoogleIcon() {
   return 'data:image/svg+xml,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48"><rect width="48" height="48" fill="#4285f4" rx="4"/><path fill="white" d="M24 20v5h7.5c-.3 1.6-1.9 4.7-7.5 4.7-4.5 0-8.2-3.7-8.2-8.2s3.7-8.2 8.2-8.2c2.6 0 4.3 1.1 5.3 2l4-3.9C30.8 9.2 27.7 8 24 8c-7.7 0-14 6.3-14 14s6.3 14 14 14c8.1 0 13.5-5.7 13.5-13.7 0-.9-.1-1.6-.2-2.3H24z"/></svg>')
 }
 
+function getTerminalIcon() {
+  return 'data:image/svg+xml,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48"><rect width="48" height="48" fill="#2d2d2d" rx="4"/><path fill="#4caf50" d="M12 14l6 6-6 6v-2l4-4-4-4v-2z"/><rect x="20" y="24" width="10" height="2" fill="#4caf50"/></svg>')
+}
+
+function getConversionIcon() {
+  return 'data:image/svg+xml,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48"><rect width="48" height="48" fill="#ff9800" rx="4"/><path fill="white" d="M20 16l-4 4 4 4v-3h8v-2h-8v-3zm8 12l4-4-4-4v3h-8v2h8v3z"/></svg>')
+}
+
 function openGoogleSearch(query) {
   const searchUrl = `https://www.google.com/search?q=${encodeURIComponent(query)}`
   window.electronAPI.openFile(searchUrl)
@@ -317,6 +368,98 @@ function openGoogleSearch(query) {
   searchInput.value = ''
   filteredResults = []
   displayResults()
+}
+
+// Fonction de conversion (devises et unités)
+function tryConversion(query) {
+  // Parser la requête : "valeur unité_source to unité_destination"
+  const match = query.match(/^([\d.,]+)\s*([a-zA-Z€$£¥°]+)\s+to\s+([a-zA-Z€$£¥°]+)$/i)
+
+  if (!match) return null
+
+  const value = parseFloat(match[1].replace(',', '.'))
+  const fromUnit = match[2].toLowerCase()
+  const toUnit = match[3].toLowerCase()
+
+  if (isNaN(value)) return null
+
+  // Tables de conversion
+  const conversions = {
+    // Devises (taux approximatifs, devraient idéalement venir d'une API)
+    'currencies': {
+      'usd': { 'eur': 0.92, 'gbp': 0.79, 'jpy': 149.5, 'cad': 1.36, 'chf': 0.88 },
+      '$': { 'eur': 0.92, '€': 0.92, 'gbp': 0.79, '£': 0.79 },
+      'eur': { 'usd': 1.09, 'gbp': 0.86, 'jpy': 163, 'cad': 1.48, 'chf': 0.96 },
+      '€': { 'usd': 1.09, '$': 1.09, 'gbp': 0.86, '£': 0.86 },
+      'gbp': { 'usd': 1.27, 'eur': 1.16, 'jpy': 189, 'cad': 1.72, 'chf': 1.11 },
+      '£': { 'usd': 1.27, '$': 1.27, 'eur': 1.16, '€': 1.16 },
+    },
+
+    // Longueurs
+    'length': {
+      'm': { 'km': 0.001, 'cm': 100, 'mm': 1000, 'ft': 3.28084, 'in': 39.3701, 'mi': 0.000621371 },
+      'km': { 'm': 1000, 'cm': 100000, 'mm': 1000000, 'ft': 3280.84, 'in': 39370.1, 'mi': 0.621371 },
+      'cm': { 'm': 0.01, 'km': 0.00001, 'mm': 10, 'ft': 0.0328084, 'in': 0.393701 },
+      'mm': { 'm': 0.001, 'km': 0.000001, 'cm': 0.1, 'ft': 0.00328084, 'in': 0.0393701 },
+      'ft': { 'm': 0.3048, 'km': 0.0003048, 'cm': 30.48, 'mm': 304.8, 'in': 12, 'mi': 0.000189394 },
+      'in': { 'm': 0.0254, 'km': 0.0000254, 'cm': 2.54, 'mm': 25.4, 'ft': 0.0833333 },
+      'mi': { 'm': 1609.34, 'km': 1.60934, 'ft': 5280, 'in': 63360 }
+    },
+
+    // Poids
+    'weight': {
+      'kg': { 'g': 1000, 'mg': 1000000, 'lb': 2.20462, 'oz': 35.274 },
+      'g': { 'kg': 0.001, 'mg': 1000, 'lb': 0.00220462, 'oz': 0.035274 },
+      'mg': { 'kg': 0.000001, 'g': 0.001, 'lb': 0.00000220462, 'oz': 0.000035274 },
+      'lb': { 'kg': 0.453592, 'g': 453.592, 'mg': 453592, 'oz': 16 },
+      'oz': { 'kg': 0.0283495, 'g': 28.3495, 'mg': 28349.5, 'lb': 0.0625 }
+    },
+
+    // Température
+    'temperature': {
+      'c': { 'f': (v) => v * 9/5 + 32, 'k': (v) => v + 273.15 },
+      '°c': { 'f': (v) => v * 9/5 + 32, '°f': (v) => v * 9/5 + 32, 'k': (v) => v + 273.15 },
+      'f': { 'c': (v) => (v - 32) * 5/9, 'k': (v) => (v - 32) * 5/9 + 273.15 },
+      '°f': { 'c': (v) => (v - 32) * 5/9, '°c': (v) => (v - 32) * 5/9, 'k': (v) => (v - 32) * 5/9 + 273.15 },
+      'k': { 'c': (v) => v - 273.15, 'f': (v) => (v - 273.15) * 9/5 + 32 }
+    },
+
+    // Volume
+    'volume': {
+      'l': { 'ml': 1000, 'gal': 0.264172, 'qt': 1.05669, 'pt': 2.11338 },
+      'ml': { 'l': 0.001, 'gal': 0.000264172, 'qt': 0.00105669, 'pt': 0.00211338 },
+      'gal': { 'l': 3.78541, 'ml': 3785.41, 'qt': 4, 'pt': 8 },
+      'qt': { 'l': 0.946353, 'ml': 946.353, 'gal': 0.25, 'pt': 2 },
+      'pt': { 'l': 0.473176, 'ml': 473.176, 'gal': 0.125, 'qt': 0.5 }
+    }
+  }
+
+  // Rechercher dans toutes les catégories
+  for (const category in conversions) {
+    const table = conversions[category]
+
+    if (table[fromUnit] && table[fromUnit][toUnit] !== undefined) {
+      const factor = table[fromUnit][toUnit]
+      let result
+
+      if (typeof factor === 'function') {
+        // Pour la température
+        result = factor(value)
+      } else {
+        result = value * factor
+      }
+
+      // Formater le résultat
+      const formattedResult = result.toFixed(2).replace(/\.?0+$/, '')
+
+      return {
+        result: `${formattedResult} ${toUnit.toUpperCase()}`,
+        description: `${value} ${fromUnit.toUpperCase()} = ${formattedResult} ${toUnit.toUpperCase()}`
+      }
+    }
+  }
+
+  return null
 }
 
 // Vérifier si une chaîne est une expression mathématique
@@ -483,6 +626,57 @@ function filterResults(query) {
     return
   }
 
+  // === SNIPPET: "??" - Recherche web directe ===
+  if (query.startsWith('??')) {
+    const searchQuery = query.substring(2).trim()
+    if (searchQuery) {
+      filteredResults = [{
+        name: 'Rechercher sur Google',
+        description: `"${searchQuery}"`,
+        resultType: 'web-search',
+        searchQuery: searchQuery,
+        icon: getGoogleIcon()
+      }]
+      calculationResult = null
+      selectedIndex = 0
+      return
+    }
+  }
+
+  // === SNIPPET: ">" - Exécution de commande ===
+  if (query.startsWith('>')) {
+    const command = query.substring(1).trim()
+    if (command) {
+      filteredResults = [{
+        name: 'Exécuter la commande',
+        description: command,
+        resultType: 'command',
+        command: command,
+        icon: getTerminalIcon()
+      }]
+      calculationResult = null
+      selectedIndex = 0
+      return
+    }
+  }
+
+  // === SNIPPET: "to" - Conversion ===
+  if (query.includes(' to ')) {
+    const conversionResult = tryConversion(query)
+    if (conversionResult) {
+      filteredResults = [{
+        name: conversionResult.result,
+        description: conversionResult.description,
+        resultType: 'conversion',
+        value: conversionResult.result,
+        icon: getConversionIcon()
+      }]
+      calculationResult = null
+      selectedIndex = 0
+      return
+    }
+  }
+
   // Vérifier si c'est une expression mathématique
   if (isMathExpression(query)) {
     const result = evaluateMath(query)
@@ -495,34 +689,56 @@ function filterResults(query) {
   }
 
   calculationResult = null
-  const lowerQuery = query.toLowerCase()
+
+  // === SNIPPET: "." - Applications uniquement ===
+  let lowerQuery = query.toLowerCase()
+  let searchAppsOnly = false
+  let searchFilesOnly = false
+
+  if (lowerQuery.startsWith('.')) {
+    searchAppsOnly = true
+    lowerQuery = lowerQuery.substring(1).trim().toLowerCase()
+  }
+  // === SNIPPET: "?" - Fichiers/dossiers uniquement ===
+  else if (lowerQuery.startsWith('?')) {
+    searchFilesOnly = true
+    lowerQuery = lowerQuery.substring(1).trim().toLowerCase()
+  }
+
   const results = []
 
-  // Filtrer les applications
-  const apps = allApps.filter(app => {
-    return app.name.toLowerCase().includes(lowerQuery) ||
-           (app.description && app.description.toLowerCase().includes(lowerQuery))
-  }).map(app => ({
-    ...app,
-    resultType: 'app',
-    score: app.name.toLowerCase().startsWith(lowerQuery) ? 2 : 1
-  }))
+  // Filtrer les applications (sauf si snippet "?")
+  if (!searchFilesOnly) {
+    const apps = allApps.filter(app => {
+      return app.name.toLowerCase().includes(lowerQuery) ||
+             (app.description && app.description.toLowerCase().includes(lowerQuery))
+    }).map(app => ({
+      ...app,
+      resultType: 'app',
+      score: app.name.toLowerCase().startsWith(lowerQuery) ? 2 : 1
+    }))
+    results.push(...apps)
+  }
 
-  // Filtrer les fichiers
-  const files = allFiles.filter(file => {
-    return file.name.toLowerCase().includes(lowerQuery)
-  }).map(file => ({
-    ...file,
-    resultType: 'file',
-    score: file.name.toLowerCase().startsWith(lowerQuery) ? 2 : 1
-  }))
+  // Filtrer les fichiers (sauf si snippet ".")
+  if (!searchAppsOnly) {
+    const files = allFiles.filter(file => {
+      return file.name.toLowerCase().includes(lowerQuery)
+    }).map(file => ({
+      ...file,
+      resultType: 'file',
+      score: file.name.toLowerCase().startsWith(lowerQuery) ? 2 : 1
+    }))
+    results.push(...files)
+  }
 
-  // Combiner et trier par score (apps en premier si score égal)
-  results.push(...apps, ...files)
+  // Combiner et trier par score (apps en premier si score égal, sauf si snippet "?")
   results.sort((a, b) => {
     if (b.score !== a.score) return b.score - a.score
-    if (a.resultType === 'app' && b.resultType !== 'app') return -1
-    if (a.resultType !== 'app' && b.resultType === 'app') return 1
+    if (!searchFilesOnly) {
+      if (a.resultType === 'app' && b.resultType !== 'app') return -1
+      if (a.resultType !== 'app' && b.resultType === 'app') return 1
+    }
     return 0
   })
 
@@ -546,7 +762,12 @@ function displayResults() {
   }
 
   if (filteredResults.length === 0) {
-    if (searchInput.value.trim()) {
+    const query = searchInput.value.trim()
+
+    // Ne pas afficher l'option Google si on utilise un snippet
+    const isSnippet = query.startsWith('.') || query.startsWith('?') || query.startsWith('>') || query.includes(' to ')
+
+    if (query && !isSnippet) {
       // Créer une option de recherche Google
       const googleItem = document.createElement('div')
       googleItem.className = 'result-item google-search selected'
@@ -578,7 +799,7 @@ function displayResults() {
 
       resultsContainer.appendChild(googleItem)
       selectedIndex = 0
-    } else {
+    } else if (!query) {
       // Afficher l'historique si l'input est vide
       displayHistory()
     }
@@ -603,6 +824,15 @@ function displayResults() {
       icon.onerror = () => {
         icon.src = 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><rect width="24" height="24" fill="%23555"/><text x="12" y="16" text-anchor="middle" fill="white" font-size="10">?</text></svg>'
       }
+    } else if (result.resultType === 'web-search') {
+      // Icône de recherche web
+      icon.src = result.icon
+    } else if (result.resultType === 'command') {
+      // Icône de terminal pour les commandes
+      icon.src = result.icon
+    } else if (result.resultType === 'conversion') {
+      // Icône de conversion
+      icon.src = result.icon
     } else {
       // Icône de fichier ou dossier avec le système d'icônes personnalisées
       const fileIconInfo = getFileIcon(result.name, result.path, result.type)
@@ -684,14 +914,40 @@ function getIconPath(iconName) {
 
 // Ouvrir un résultat (application ou fichier)
 function openResult(result) {
-  // Ajouter à l'historique avant d'ouvrir
-  const query = searchInput.value
-  addToHistory(query, result.resultType, result)
+  // Ajouter à l'historique avant d'ouvrir (sauf pour conversions et commandes)
+  if (result.resultType !== 'conversion' && result.resultType !== 'command' && result.resultType !== 'web-search') {
+    const query = searchInput.value
+    addToHistory(query, result.resultType, result)
+  }
 
   if (result.resultType === 'app' && result.exec) {
     window.electronAPI.launchApp(result.exec)
   } else if (result.resultType === 'file' && result.path) {
     window.electronAPI.openFile(result.path)
+  } else if (result.resultType === 'web-search') {
+    // Ouvrir la recherche Google
+    openGoogleSearch(result.searchQuery)
+    return // Ne pas vider l'input ici, openGoogleSearch le fait déjà
+  } else if (result.resultType === 'command') {
+    // Exécuter la commande dans un terminal
+    window.electronAPI.executeCommand(result.command)
+  } else if (result.resultType === 'conversion') {
+    // Copier le résultat de la conversion dans le presse-papier
+    navigator.clipboard.writeText(result.value).then(() => {
+      // Montrer brièvement le résultat copié
+      searchInput.value = result.value
+      setTimeout(() => {
+        searchInput.value = ''
+        filteredResults = []
+        displayResults()
+      }, 300)
+    }).catch(() => {
+      // Si la copie échoue, juste fermer
+      searchInput.value = ''
+      filteredResults = []
+      displayResults()
+    })
+    return
   }
 
   searchInput.value = ''
