@@ -12,6 +12,15 @@ const { spawn } = require('child_process')
 const { scanApplications } = require('./appScanner')
 const { scanFiles } = require('./fileScanner')
 
+// Import auto-launch avec gestion d'erreur si non installé
+let AutoLaunch
+try {
+  AutoLaunch = require('auto-launch')
+} catch (error) {
+  console.warn('auto-launch package not installed, auto-start will not be available')
+  AutoLaunch = null
+}
+
 // === CONFIGURATION ===
 
 // Dimensions de la fenêtre de recherche
@@ -31,6 +40,17 @@ const GLOBAL_SHORTCUT = 'Alt+Space'
  * @type {BrowserWindow|null}
  */
 let win = null
+
+/**
+ * Configuration de l'auto-lancement au démarrage du système
+ */
+let autoLauncher = null
+if (AutoLaunch) {
+  autoLauncher = new AutoLaunch({
+    name: 'Finder',
+    path: app.getPath('exe'),
+  })
+}
 
 // === FONCTIONS DE CRÉATION ET GESTION DE LA FENÊTRE ===
 
@@ -259,18 +279,48 @@ function setupIpcHandlers() {
   })
 }
 
+// === GESTION DE L'AUTO-LANCEMENT ===
+
+/**
+ * Configure l'auto-lancement de l'application au démarrage du système
+ */
+async function setupAutoLaunch() {
+  if (!autoLauncher) {
+    console.warn('Auto-launch not available (package not installed)')
+    return
+  }
+
+  try {
+    // Vérifier si l'auto-lancement est déjà activé
+    const isEnabled = await autoLauncher.isEnabled()
+
+    if (!isEnabled) {
+      // Activer l'auto-lancement
+      await autoLauncher.enable()
+      console.log('Auto-launch activé avec succès')
+    } else {
+      console.log('Auto-launch déjà activé')
+    }
+  } catch (error) {
+    console.error('Erreur lors de la configuration de l\'auto-launch:', error)
+  }
+}
+
 // === INITIALISATION DE L'APPLICATION ===
 
 /**
  * Point d'entrée principal de l'application
  * Exécuté quand Electron est prêt
  */
-app.whenReady().then(() => {
+app.whenReady().then(async () => {
   // Créer la fenêtre principale
   createWindow()
 
   // Configurer les handlers IPC
   setupIpcHandlers()
+
+  // Configurer l'auto-lancement
+  await setupAutoLaunch()
 
   // Enregistrer le raccourci global
   const registered = globalShortcut.register(GLOBAL_SHORTCUT, toggleWindow)

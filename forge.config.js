@@ -20,7 +20,10 @@ module.exports = {
           description: 'Application de recherche type Spotlight pour Linux',
           categories: ['Utility'],
           section: 'utils',
-          priority: 'optional'
+          priority: 'optional',
+          scripts: {
+            postinst: 'postinst.sh'
+          }
         }
       },
     },

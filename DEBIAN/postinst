@@ -1,0 +1,22 @@
+#!/bin/bash
+# Script de post-installation pour Finder
+# Lance automatiquement l'application après l'installation
+
+# Attendre un peu que l'installation se termine complètement
+sleep 2
+
+# Détecter l'utilisateur qui a lancé l'installation
+# (même si exécuté avec sudo)
+if [ -n "$SUDO_USER" ]; then
+    REAL_USER="$SUDO_USER"
+else
+    REAL_USER="$USER"
+fi
+
+# Lancer l'application en tant qu'utilisateur réel (pas root)
+# L'application se lancera en arrière-plan
+su - "$REAL_USER" -c "nohup finder > /dev/null 2>&1 &" || \
+su - "$REAL_USER" -c "nohup /usr/bin/finder > /dev/null 2>&1 &" || \
+su - "$REAL_USER" -c "nohup /opt/Finder/finder > /dev/null 2>&1 &"
+
+exit 0

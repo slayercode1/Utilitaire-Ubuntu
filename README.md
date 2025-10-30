@@ -33,12 +33,20 @@ Une application de recherche type **Spotlight** pour Linux, construite avec Elec
 - Fallback automatique vers Google si aucun résultat local
 - Ouverture dans le navigateur par défaut
 
+### 🔎 Snippets de recherche avancée
+- **`.`** : Rechercher uniquement les applications (ex: `.firefox`)
+- **`?`** : Rechercher uniquement les fichiers et dossiers (ex: `?document`)
+- **`??`** : Recherche directe sur Google (ex: `??recette de crêpes`)
+- **`>`** : Exécuter une commande shell (ex: `>ls -la`)
+- **`to`** : Conversions d'unités et devises (ex: `10$ to eur`, `100m to ft`)
+
 ### 📜 Historique des recherches
 - Stockage persistant des 5 dernières recherches
 - Clic pour relancer directement l'application/fichier
 - Suppression individuelle des entrées
 
 ### ⚡ Autres fonctionnalités
+- **Auto-démarrage** : Se lance automatiquement au démarrage de la session
 - Interface moderne et fluide
 - Masquage automatique de la fenêtre (blur)
 - Compteur d'éléments indexés
@@ -105,14 +113,72 @@ npm run make
 
 **Le package .deb inclut :**
 - ✅ L'application Finder
-- ✅ Configuration autostart (lancement automatique)
+- ✅ Configuration autostart (lancement automatique au démarrage)
 - ✅ Fichier .desktop pour le menu d'applications
 - ✅ Toutes les dépendances
+
+**Note sur l'auto-démarrage :**
+L'application se configure automatiquement pour démarrer avec votre session Linux. Elle utilise le package `auto-launch` qui crée une entrée dans `~/.config/autostart/`. Aucune configuration manuelle n'est nécessaire.
 
 ## 🎮 Utilisation
 
 ### Raccourci clavier
 Appuyez sur **`Alt + Space`** pour ouvrir/fermer Finder
+
+### Snippets de recherche
+
+#### Applications uniquement (`.`)
+```
+.firefox     → Cherche uniquement dans les applications
+.chrome
+.code
+```
+
+#### Fichiers uniquement (`?`)
+```
+?document    → Cherche uniquement dans les fichiers/dossiers
+?image
+?projet
+```
+
+#### Recherche web (`??`)
+```
+??météo paris     → Recherche directement sur Google
+??traduction bonjour en anglais
+```
+
+#### Commandes shell (`>`)
+```
+>ls -la           → Exécute la commande dans un terminal
+>htop
+>git status
+```
+
+#### Conversions (`to`)
+```
+# Devises
+10$ to eur        → Convertit 10 dollars en euros
+100€ to usd
+50£ to eur
+
+# Longueurs
+100m to ft        → Convertit 100 mètres en pieds
+5km to mi
+10in to cm
+
+# Poids
+5kg to lb         → Convertit 5 kilos en livres
+100g to oz
+
+# Températures
+20c to f          → Convertit 20°C en Fahrenheit
+100f to c
+
+# Volumes
+5l to gal         → Convertit 5 litres en gallons
+```
+
+**Note :** Le résultat des conversions est automatiquement copié dans le presse-papier.
 
 ### Recherche
 1. Tapez le nom d'une application, fichier, ou une expression mathématique

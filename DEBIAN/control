@@ -1,0 +1,13 @@
+Package: finder
+Version: 1.0.0
+Section: utils
+Priority: optional
+Architecture: amd64
+Depends: libgtk-3-0, libnotify4, libnss3, xdg-utils, libatspi2.0-0, libdrm2, libgbm1, libxcb-dri3-0, kde-cli-tools | kde-runtime | trash-cli | libglib2.0-bin | gvfs-bin
+Recommends: pulseaudio | libasound2
+Suggests: gir1.2-gnomekeyring-1.0, libgnome-keyring0, lsb-release
+Installed-Size: 291467
+Maintainer: Finder Team
+Homepage: https://github.com/yourusername/finder
+Description: Application de recherche type Spotlight pour Linux
+ Application de recherche type Spotlight pour Linux
