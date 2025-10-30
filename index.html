@@ -195,6 +195,36 @@
       .history-item {
         position: relative;
       }
+
+      .open-file-btn {
+        background: rgba(74, 158, 255, 0.2);
+        border: 1px solid rgba(74, 158, 255, 0.4);
+        color: #4a9eff;
+        font-size: 12px;
+        line-height: 1;
+        cursor: pointer;
+        padding: 4px 8px;
+        border-radius: 4px;
+        transition: all 0.15s ease;
+        margin-left: 8px;
+        flex-shrink: 0;
+        display: none;
+      }
+
+      .result-item:hover .open-file-btn,
+      .result-item.selected .open-file-btn {
+        display: block;
+      }
+
+      .open-file-btn:hover {
+        background: rgba(74, 158, 255, 0.3);
+        border-color: rgba(74, 158, 255, 0.6);
+        transform: scale(1.05);
+      }
+
+      .open-file-btn:active {
+        transform: scale(0.95);
+      }
     </style>
   </head>
   <body>

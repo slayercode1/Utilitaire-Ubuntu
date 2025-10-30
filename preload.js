@@ -49,6 +49,12 @@ contextBridge.exposeInMainWorld('electronAPI', {
   openFile: (filePath) => ipcRenderer.send('open-file', filePath),
 
   /**
+   * Ouvre l'emplacement (dossier parent) du fichier dans le gestionnaire de fichiers
+   * @param {string} filePath - Chemin absolu du fichier ou dossier
+   */
+  openLocation: (filePath) => ipcRenderer.send('open-location', filePath),
+
+  /**
    * Ouvre un script shell (.sh) dans un terminal
    * @param {string} filePath - Chemin absolu du script shell
    */

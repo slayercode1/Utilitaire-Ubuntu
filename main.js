@@ -241,6 +241,38 @@ function setupIpcHandlers() {
     }
   })
 
+  // Ouvrir l'emplacement du fichier/dossier dans le gestionnaire de fichiers
+  ipcMain.on('open-location', (_event, filePath) => {
+    if (!filePath) return
+
+    console.log('Opening location:', filePath)
+
+    // Utiliser xdg-open sur le dossier parent pour les fichiers
+    // ou directement sur le dossier lui-même
+    const fs = require('fs')
+    let targetPath = filePath
+
+    try {
+      const stats = fs.statSync(filePath)
+      if (!stats.isDirectory()) {
+        // Si c'est un fichier, ouvrir le dossier parent
+        targetPath = path.dirname(filePath)
+      }
+    } catch (error) {
+      console.error('Error checking file type:', error)
+      targetPath = path.dirname(filePath)
+    }
+
+    const wrappedCommand = `nohup xdg-open "${targetPath}" > /dev/null 2>&1 &`
+
+    launchDetachedProcess(wrappedCommand, 'Location')
+
+    // Cacher la fenêtre après l'ouverture
+    if (win) {
+      win.hide()
+    }
+  })
+
   // Ouvrir un script .sh dans un terminal
   ipcMain.on('open-in-terminal', (_event, filePath) => {
     if (!filePath) return

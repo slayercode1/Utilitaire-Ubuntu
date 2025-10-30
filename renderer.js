@@ -1023,7 +1023,20 @@ function displayResults() {
     item.appendChild(icon)
     item.appendChild(info)
 
-    // Click pour ouvrir
+    // Ajouter un bouton "Ouvrir" pour les fichiers
+    if (result.resultType === 'file') {
+      const openButton = document.createElement('button')
+      openButton.className = 'open-file-btn'
+      openButton.innerHTML = '▶'
+      openButton.title = 'Ouvrir le fichier'
+      openButton.addEventListener('click', (e) => {
+        e.stopPropagation() // Empêcher le clic de se propager au parent
+        openResult(result, true) // forceOpenFile = true
+      })
+      item.appendChild(openButton)
+    }
+
+    // Click pour ouvrir (par défaut : emplacement pour fichiers, exécution pour apps)
     item.addEventListener('click', () => {
       openResult(result)
     })
@@ -1057,7 +1070,7 @@ function getIconPath(iconName) {
 }
 
 // Ouvrir un résultat (application ou fichier)
-function openResult(result) {
+function openResult(result, forceOpenFile = false) {
   // Ajouter à l'historique avant d'ouvrir (sauf pour conversions et commandes)
   if (result.resultType !== 'conversion' && result.resultType !== 'command' && result.resultType !== 'web-search') {
     const query = searchInput.value
@@ -1067,7 +1080,13 @@ function openResult(result) {
   if (result.resultType === 'app' && result.exec) {
     window.electronAPI.launchApp(result.exec)
   } else if (result.resultType === 'file' && result.path) {
-    window.electronAPI.openFile(result.path)
+    // Si forceOpenFile est true, ouvrir directement le fichier
+    // Sinon, ouvrir l'emplacement (comportement par défaut)
+    if (forceOpenFile) {
+      window.electronAPI.openFile(result.path)
+    } else {
+      window.electronAPI.openLocation(result.path)
+    }
   } else if (result.resultType === 'web-search') {
     // Ouvrir la recherche Google
     openGoogleSearch(result.searchQuery)
