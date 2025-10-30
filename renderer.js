@@ -6,6 +6,7 @@ const indexCounter = document.getElementById('indexCounter')
 
 let allApps = []
 let allFiles = []
+let allSettings = []
 let filteredResults = []
 let selectedIndex = 0
 let calculationResult = null
@@ -359,6 +360,25 @@ function getTerminalIcon() {
 
 function getConversionIcon() {
   return 'data:image/svg+xml,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48"><rect width="48" height="48" fill="#ff9800" rx="4"/><path fill="white" d="M20 16l-4 4 4 4v-3h8v-2h-8v-3zm8 12l4-4-4-4v3h-8v2h8v3z"/></svg>')
+}
+
+function getSettingIcon(settingId) {
+  const icons = {
+    'wifi': '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48"><rect width="48" height="48" fill="#2196f3" rx="4"/><path fill="white" d="M24 31c-1.7 0-3 1.3-3 3s1.3 3 3 3 3-1.3 3-3-1.3-3-3-3zm0-8c-3.9 0-7 3.1-7 7h4c0-1.7 1.3-3 3-3s3 1.3 3 3h4c0-3.9-3.1-7-7-7zm0-8c-6.1 0-11 4.9-11 11h4c0-3.9 3.1-7 7-7s7 3.1 7 7h4c0-6.1-4.9-11-11-11z"/></svg>',
+    'bluetooth': '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48"><rect width="48" height="48" fill="#2196f3" rx="4"/><path fill="white" d="M23 10v12l-6-6-2 2 8 8-8 8 2 2 6-6v12h2l8-8-6-6 6-6-8-8h-2zm2 4l4 4-4 4V14zm0 16l4 4-4 4v-8z"/></svg>',
+    'sound': '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48"><rect width="48" height="48" fill="#4caf50" rx="4"/><path fill="white" d="M12 18v12h8l10 10V8L20 18h-8zm20 6c0-2.2-1.2-4.1-3-5.1v10.2c1.8-1 3-2.9 3-5.1zm-3-13.4v4.1c3.5 1.5 6 5 6 9.3s-2.5 7.8-6 9.3v4.1c5.6-1.6 10-6.7 10-13.4s-4.4-11.8-10-13.4z"/></svg>',
+    'display': '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48"><rect width="48" height="48" fill="#9c27b0" rx="4"/><path fill="white" d="M8 10v20h32V10H8zm28 16H12V14h24v12zm-12 4h-4v4h-4v4h12v-4h-4v-4z"/></svg>',
+    'power': '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48"><rect width="48" height="48" fill="#4caf50" rx="4"/><path fill="white" d="M26 8h-4v14h4V8zm7.1 3.5l-2.8 2.8C32.7 16 34 18.8 34 22c0 5.5-4.5 10-10 10s-10-4.5-10-10c0-3.2 1.3-6 3.7-7.7l-2.8-2.8C11.5 14.3 10 18 10 22c0 7.7 6.3 14 14 14s14-6.3 14-14c0-4-1.5-7.7-4.9-10.5z"/></svg>',
+    'keyboard': '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48"><rect width="48" height="48" fill="#607d8b" rx="4"/><rect x="10" y="14" width="28" height="20" rx="2" fill="white"/><rect x="13" y="17" width="3" height="3" rx="0.5" fill="#607d8b"/><rect x="17" y="17" width="3" height="3" rx="0.5" fill="#607d8b"/><rect x="21" y="17" width="3" height="3" rx="0.5" fill="#607d8b"/><rect x="25" y="17" width="3" height="3" rx="0.5" fill="#607d8b"/><rect x="29" y="17" width="3" height="3" rx="0.5" fill="#607d8b"/><rect x="13" y="21" width="3" height="3" rx="0.5" fill="#607d8b"/><rect x="17" y="21" width="3" height="3" rx="0.5" fill="#607d8b"/><rect x="21" y="21" width="3" height="3" rx="0.5" fill="#607d8b"/><rect x="25" y="21" width="3" height="3" rx="0.5" fill="#607d8b"/><rect x="29" y="21" width="3" height="3" rx="0.5" fill="#607d8b"/><rect x="15" y="28" width="18" height="3" rx="0.5" fill="#607d8b"/></svg>',
+    'mouse': '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48"><rect width="48" height="48" fill="#607d8b" rx="4"/><path fill="white" d="M24 10c-5.5 0-10 4.5-10 10v8c0 5.5 4.5 10 10 10s10-4.5 10-10v-8c0-5.5-4.5-10-10-10zm-6 10c0-3.3 2.7-6 6-6s6 2.7 6 6v2H18v-2zm0 6h12v2c0 3.3-2.7 6-6 6s-6-2.7-6-6v-2z"/></svg>',
+    'printers': '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48"><rect width="48" height="48" fill="#795548" rx="4"/><path fill="white" d="M36 16H32V8H16v8H12c-2.2 0-4 1.8-4 4v10h8v10h16V30h8V20c0-2.2-1.8-4-4-4zm-16-4h8v4h-8v-4zm8 24h-8V28h8v8zm8-12c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2z"/></svg>',
+    'users': '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48"><rect width="48" height="48" fill="#ff5722" rx="4"/><circle cx="24" cy="18" r="6" fill="white"/><path fill="white" d="M24 26c-6.6 0-12 3-12 6.7V36h24v-3.3c0-3.7-5.4-6.7-12-6.7z"/></svg>',
+    'datetime': '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48"><rect width="48" height="48" fill="#ff9800" rx="4"/><circle cx="24" cy="24" r="12" fill="white"/><path fill="#ff9800" d="M24 14v10l7 4-1.2 2-8.8-5V14h3z"/></svg>',
+    'privacy': '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48"><rect width="48" height="48" fill="#f44336" rx="4"/><path fill="white" d="M24 8L10 14v10c0 8.6 6 16.6 14 18 8-1.4 14-9.4 14-18V14L24 8zm0 22h-2v-2h2v2zm0-4h-2v-8h2v8z"/></svg>',
+    'appearance': '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48"><rect width="48" height="48" fill="#e91e63" rx="4"/><circle cx="24" cy="24" r="8" fill="white"/><path fill="white" d="M24 10c-1.1 0-2 .9-2 2v2c0 1.1.9 2 2 2s2-.9 2-2v-2c0-1.1-.9-2-2-2zm0 24c-1.1 0-2 .9-2 2v2c0 1.1.9 2 2 2s2-.9 2-2v-2c0-1.1-.9-2-2-2zm12-12c0-1.1-.9-2-2-2h-2c-1.1 0-2 .9-2 2s.9 2 2 2h2c1.1 0 2-.9 2-2zm-24 0c0-1.1-.9-2-2-2h-2c-1.1 0-2 .9-2 2s.9 2 2 2h2c1.1 0 2-.9 2-2z"/></svg>'
+  }
+
+  return 'data:image/svg+xml,' + encodeURIComponent(icons[settingId] || icons['appearance'])
 }
 
 function openGoogleSearch(query) {
@@ -762,6 +782,16 @@ async function loadFiles() {
   }
 }
 
+async function loadSettings() {
+  try {
+    // Charger tous les paramètres système disponibles
+    allSettings = await window.electronAPI.searchSettings('')
+    console.log(`Loaded ${allSettings.length} settings`)
+  } catch (error) {
+    console.error('Error loading settings:', error)
+  }
+}
+
 // Filtrer les applications et fichiers selon la recherche
 function filterResults(query) {
   if (!query.trim()) {
@@ -876,13 +906,31 @@ function filterResults(query) {
     results.push(...files)
   }
 
-  // Combiner et trier par score (apps en premier si score égal, sauf si snippet "?")
+  // Rechercher dans les paramètres système (toujours inclus)
+  if (!searchAppsOnly && !searchFilesOnly) {
+    const settings = allSettings.filter(setting => {
+      return setting.name.toLowerCase().includes(lowerQuery) ||
+             setting.keywords.some(kw => kw.toLowerCase().includes(lowerQuery))
+    }).map(setting => ({
+      ...setting,
+      resultType: 'setting',
+      score: setting.name.toLowerCase().startsWith(lowerQuery) ? 3 :
+             setting.keywords.some(kw => kw.toLowerCase().startsWith(lowerQuery)) ? 2.5 : 1
+    }))
+    results.push(...settings)
+  }
+
+  // Combiner et trier par score
   results.sort((a, b) => {
     if (b.score !== a.score) return b.score - a.score
-    if (!searchFilesOnly) {
-      if (a.resultType === 'app' && b.resultType !== 'app') return -1
-      if (a.resultType !== 'app' && b.resultType === 'app') return 1
-    }
+
+    // Priorité : paramètres > apps > fichiers (si même score)
+    const typeOrder = { 'setting': 3, 'app': 2, 'file': 1 }
+    const orderA = typeOrder[a.resultType] || 0
+    const orderB = typeOrder[b.resultType] || 0
+
+    if (orderA !== orderB) return orderB - orderA
+
     return 0
   })
 
@@ -977,6 +1025,9 @@ function displayResults() {
     } else if (result.resultType === 'conversion') {
       // Icône de conversion
       icon.src = result.icon
+    } else if (result.resultType === 'setting') {
+      // Icône de paramètre système - créer un SVG
+      icon.src = getSettingIcon(result.id)
     } else {
       // Icône de fichier ou dossier avec le système d'icônes personnalisées
       const fileIconInfo = getFileIcon(result.name, result.path, result.type)
@@ -1013,7 +1064,9 @@ function displayResults() {
 
     if (result.resultType === 'app') {
       description.textContent = result.description || 'Application'
-    } else {
+    } else if (result.resultType === 'setting') {
+      description.textContent = 'Paramètre système'
+    } else if (result.path) {
       description.textContent = result.path
     }
 
@@ -1034,6 +1087,43 @@ function displayResults() {
         openResult(result, true) // forceOpenFile = true
       })
       item.appendChild(openButton)
+    }
+
+    // Ajouter un switch toggle pour les paramètres système avec action toggle
+    if (result.resultType === 'setting' && result.actions) {
+      const toggleAction = result.actions.find(a => a.id === 'toggle')
+
+      if (toggleAction) {
+        const toggleSwitch = document.createElement('label')
+        toggleSwitch.className = 'toggle-switch'
+        toggleSwitch.title = toggleAction.name
+
+        const checkbox = document.createElement('input')
+        checkbox.type = 'checkbox'
+        checkbox.className = 'toggle-checkbox'
+
+        const slider = document.createElement('span')
+        slider.className = 'toggle-slider'
+
+        toggleSwitch.appendChild(checkbox)
+        toggleSwitch.appendChild(slider)
+
+        // Charger l'état actuel du paramètre
+        window.electronAPI.getSettingState(result.id).then(isEnabled => {
+          checkbox.checked = isEnabled // checked = vert = activé, unchecked = gris = désactivé
+        }).catch(err => {
+          console.error('Error loading setting state:', err)
+        })
+
+        toggleSwitch.addEventListener('click', (e) => {
+          e.stopPropagation()
+          // Inverser immédiatement pour feedback visuel
+          checkbox.checked = !checkbox.checked
+          window.electronAPI.executeSettingAction(result.id, 'toggle')
+        })
+
+        item.appendChild(toggleSwitch)
+      }
     }
 
     // Click pour ouvrir (par défaut : emplacement pour fichiers, exécution pour apps)
@@ -1071,14 +1161,21 @@ function getIconPath(iconName) {
 
 // Ouvrir un résultat (application ou fichier)
 function openResult(result, forceOpenFile = false) {
-  // Ajouter à l'historique avant d'ouvrir (sauf pour conversions et commandes)
-  if (result.resultType !== 'conversion' && result.resultType !== 'command' && result.resultType !== 'web-search') {
+  // Ajouter à l'historique avant d'ouvrir (sauf pour conversions, commandes et paramètres)
+  if (result.resultType !== 'conversion' && result.resultType !== 'command' && result.resultType !== 'web-search' && result.resultType !== 'setting') {
     const query = searchInput.value
     addToHistory(query, result.resultType, result)
   }
 
   if (result.resultType === 'app' && result.exec) {
     window.electronAPI.launchApp(result.exec)
+  } else if (result.resultType === 'setting') {
+    // Pour les paramètres, ouvrir l'action "settings" par défaut
+    const settingsAction = result.actions.find(a => a.id === 'settings')
+    if (settingsAction) {
+      window.electronAPI.executeSettingAction(result.id, 'settings')
+    }
+    return // Ne pas continuer pour éviter de vider l'input
   } else if (result.resultType === 'file' && result.path) {
     // Si forceOpenFile est true, ouvrir directement le fichier
     // Sinon, ouvrir l'emplacement (comportement par défaut)
@@ -1135,7 +1232,7 @@ function selectItem(delta) {
 // Événements
 window.addEventListener('DOMContentLoaded', async () => {
   loadHistory()
-  await Promise.all([loadApplications(), loadFiles()])
+  await Promise.all([loadApplications(), loadFiles(), loadSettings()])
   displayResults() // Afficher l'historique au démarrage
   searchInput.focus()
 })

@@ -11,6 +11,7 @@ const path = require('node:path')
 const { spawn } = require('child_process')
 const { scanApplications } = require('./appScanner')
 const { scanFiles } = require('./fileScanner')
+const { searchSettings, getSettingById, getSettingState } = require('./settingsScanner')
 
 // Import auto-launch avec gestion d'erreur si non installé
 let AutoLaunch
@@ -305,6 +306,76 @@ function setupIpcHandlers() {
     launchDetachedProcess(wrappedCommand, 'Command in terminal')
 
     // Cacher la fenêtre après l'ouverture
+    if (win) {
+      win.hide()
+    }
+  })
+
+  // Rechercher dans les paramètres système
+  ipcMain.handle('search-settings', async (_event, query) => {
+    return searchSettings(query)
+  })
+
+  // Récupérer l'état actuel d'un paramètre (pour le toggle)
+  ipcMain.handle('get-setting-state', async (_event, settingId) => {
+    return await getSettingState(settingId)
+  })
+
+  // Exécuter une action rapide d'un paramètre
+  ipcMain.on('execute-setting-action', async (_event, settingId, actionId) => {
+    if (!settingId || !actionId) return
+
+    console.log('Executing setting action:', settingId, actionId)
+
+    const setting = getSettingById(settingId)
+    if (!setting) {
+      console.error('Setting not found:', settingId)
+      return
+    }
+
+    const action = setting.actions.find(a => a.id === actionId)
+    if (!action) {
+      console.error('Action not found:', actionId)
+      return
+    }
+
+    try {
+      // Si l'action a une fonction command, l'exécuter
+      if (typeof action.command === 'function') {
+        const result = await action.command()
+        console.log('Action result:', result)
+
+        // Envoyer une notification au renderer si besoin
+        if (win) {
+          win.webContents.send('action-result', result)
+        }
+      }
+      // Sinon, c'est une commande shell
+      else if (typeof action.command === 'string') {
+        // Essayer les commandes alternatives si la principale échoue
+        const commands = [action.command, action.commandAlt, action.commandAlt2].filter(Boolean)
+
+        let success = false
+        for (const cmd of commands) {
+          try {
+            const wrappedCommand = `nohup ${cmd} > /dev/null 2>&1 &`
+            launchDetachedProcess(wrappedCommand, 'Setting action')
+            success = true
+            break
+          } catch (error) {
+            console.log(`Command ${cmd} failed, trying next...`)
+          }
+        }
+
+        if (!success) {
+          console.error('All command alternatives failed')
+        }
+      }
+    } catch (error) {
+      console.error('Error executing action:', error)
+    }
+
+    // Cacher la fenêtre après l'action
     if (win) {
       win.hide()
     }

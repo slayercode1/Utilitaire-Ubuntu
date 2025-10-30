@@ -64,5 +64,32 @@ contextBridge.exposeInMainWorld('electronAPI', {
    * Exécute une commande shell dans un terminal
    * @param {string} command - Commande à exécuter
    */
-  executeCommand: (command) => ipcRenderer.send('execute-command', command)
+  executeCommand: (command) => ipcRenderer.send('execute-command', command),
+
+  /**
+   * Recherche dans les paramètres système
+   * @param {string} query - Requête de recherche
+   * @returns {Promise<Array>} Liste des paramètres correspondants
+   */
+  searchSettings: (query) => ipcRenderer.invoke('search-settings', query),
+
+  /**
+   * Récupère l'état actuel d'un paramètre (activé/désactivé)
+   * @param {string} settingId - ID du paramètre
+   * @returns {Promise<boolean>} true si activé, false sinon
+   */
+  getSettingState: (settingId) => ipcRenderer.invoke('get-setting-state', settingId),
+
+  /**
+   * Exécute une action rapide d'un paramètre système
+   * @param {string} settingId - ID du paramètre
+   * @param {string} actionId - ID de l'action
+   */
+  executeSettingAction: (settingId, actionId) => ipcRenderer.send('execute-setting-action', settingId, actionId),
+
+  /**
+   * Écoute les résultats des actions (notifications)
+   * @param {Function} callback - Fonction de rappel pour recevoir les résultats
+   */
+  onActionResult: (callback) => ipcRenderer.on('action-result', (_event, result) => callback(result))
 })

@@ -225,6 +225,71 @@
       .open-file-btn:active {
         transform: scale(0.95);
       }
+
+      /* Toggle Switch pour paramètres système */
+      .toggle-switch {
+        position: relative;
+        display: none;
+        width: 44px;
+        height: 24px;
+        margin-left: 8px;
+        flex-shrink: 0;
+        cursor: pointer;
+      }
+
+      .result-item:hover .toggle-switch,
+      .result-item.selected .toggle-switch {
+        display: inline-block;
+      }
+
+      .toggle-checkbox {
+        opacity: 0;
+        width: 0;
+        height: 0;
+      }
+
+      .toggle-slider {
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background-color: rgba(255, 255, 255, 0.2);
+        border: 1px solid rgba(255, 255, 255, 0.3);
+        border-radius: 24px;
+        transition: all 0.3s ease;
+      }
+
+      .toggle-slider:before {
+        content: "";
+        position: absolute;
+        height: 18px;
+        width: 18px;
+        left: 2px;
+        bottom: 2px;
+        background-color: white;
+        border-radius: 50%;
+        transition: all 0.3s ease;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+      }
+
+      .toggle-checkbox:checked + .toggle-slider {
+        background-color: #4caf50;
+        border-color: #4caf50;
+      }
+
+      .toggle-checkbox:checked + .toggle-slider:before {
+        transform: translateX(20px);
+      }
+
+      .toggle-switch:hover .toggle-slider {
+        background-color: rgba(255, 255, 255, 0.3);
+      }
+
+      .toggle-checkbox:checked + .toggle-slider:hover {
+        background-color: #66bb6a;
+        border-color: #66bb6a;
+      }
     </style>
   </head>
   <body>
