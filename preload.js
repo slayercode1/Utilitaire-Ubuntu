@@ -55,12 +55,6 @@ contextBridge.exposeInMainWorld('electronAPI', {
   openLocation: (filePath) => ipcRenderer.send('open-location', filePath),
 
   /**
-   * Ouvre un script shell (.sh) dans un terminal
-   * @param {string} filePath - Chemin absolu du script shell
-   */
-  openInTerminal: (filePath) => ipcRenderer.send('open-in-terminal', filePath),
-
-  /**
    * Exécute une commande shell dans un terminal
    * @param {string} command - Commande à exécuter
    */
@@ -85,11 +79,5 @@ contextBridge.exposeInMainWorld('electronAPI', {
    * @param {string} settingId - ID du paramètre
    * @param {string} actionId - ID de l'action
    */
-  executeSettingAction: (settingId, actionId) => ipcRenderer.send('execute-setting-action', settingId, actionId),
-
-  /**
-   * Écoute les résultats des actions (notifications)
-   * @param {Function} callback - Fonction de rappel pour recevoir les résultats
-   */
-  onActionResult: (callback) => ipcRenderer.on('action-result', (_event, result) => callback(result))
+  executeSettingAction: (settingId, actionId) => ipcRenderer.send('execute-setting-action', settingId, actionId)
 })

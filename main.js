@@ -277,24 +277,6 @@ function setupIpcHandlers() {
     }
   })
 
-  // Ouvrir un script .sh dans un terminal
-  ipcMain.on('open-in-terminal', (_event, filePath) => {
-    if (!filePath) return
-
-    console.log('Opening script in terminal:', filePath)
-
-    // Ouvrir dans x-terminal-emulator (standard Debian/Ubuntu)
-    // Le terminal reste ouvert après exécution pour voir les résultats
-    const wrappedCommand = `nohup x-terminal-emulator -e "bash -c 'cd \\"$(dirname \\"${filePath}\\")\\" && bash \\"${filePath}\\"; echo; echo Appuyez sur Entrée pour fermer...; read'" > /dev/null 2>&1 &`
-
-    launchDetachedProcess(wrappedCommand, 'Script in terminal')
-
-    // Cacher la fenêtre après l'ouverture
-    if (win) {
-      win.hide()
-    }
-  })
-
   // Exécuter une commande dans un terminal
   ipcMain.on('execute-command', (_event, command) => {
     if (!command) return
@@ -347,11 +329,6 @@ function setupIpcHandlers() {
       if (typeof action.command === 'function') {
         const result = await action.command()
         console.log('Action result:', result)
-
-        // Envoyer une notification au renderer si besoin
-        if (win) {
-          win.webContents.send('action-result', result)
-        }
       }
       // Sinon, c'est une commande shell
       else if (typeof action.command === 'string') {
