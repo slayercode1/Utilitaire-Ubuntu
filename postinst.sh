@@ -10,6 +10,26 @@ else
     USER_HOME="$HOME"
 fi
 
+# Installer l'icône dans les emplacements système
+ICON_SIZES="256x256 128x128 64x64 48x48 32x32 16x16"
+ICON_SOURCE="/usr/lib/finder/resources/logo.png"
+
+# Si l'icône existe dans le package, l'installer
+if [ -f "$ICON_SOURCE" ]; then
+    # Installer dans /usr/share/pixmaps pour compatibilité maximale
+    cp "$ICON_SOURCE" /usr/share/pixmaps/finder.png 2>/dev/null || true
+
+    # Installer dans hicolor theme (standard)
+    for size in $ICON_SIZES; do
+        ICON_DIR="/usr/share/icons/hicolor/$size/apps"
+        mkdir -p "$ICON_DIR"
+        convert "$ICON_SOURCE" -resize $size "$ICON_DIR/finder.png" 2>/dev/null || cp "$ICON_SOURCE" "$ICON_DIR/finder.png" 2>/dev/null || true
+    done
+
+    # Mettre à jour le cache des icônes
+    gtk-update-icon-cache -f -t /usr/share/icons/hicolor 2>/dev/null || true
+fi
+
 # Créer le répertoire autostart si nécessaire
 AUTOSTART_DIR="$USER_HOME/.config/autostart"
 mkdir -p "$AUTOSTART_DIR"

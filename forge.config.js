@@ -4,6 +4,10 @@ const { FuseV1Options, FuseVersion } = require('@electron/fuses');
 module.exports = {
   packagerConfig: {
     asar: true,
+    icon: './logo.png',
+    extraResource: [
+      './logo.png'
+    ]
   },
   rebuildConfig: {},
   makers: [
@@ -21,6 +25,7 @@ module.exports = {
           categories: ['Utility'],
           section: 'utils',
           priority: 'optional',
+          icon: './logo.png',
           scripts: {
             postinst: 'postinst.sh'
           }
