@@ -70,6 +70,7 @@ function createWindow() {
     alwaysOnTop: true,     // Toujours au premier plan
     skipTaskbar: true,     // Ne pas afficher dans la barre des tâches
     show: false,           // Ne pas afficher au démarrage
+    icon: path.join(__dirname, 'logo.png'),  // Icône de l'application
     webPreferences: {
       preload: path.join(__dirname, 'preload.js'),
       contextIsolation: true,   // Sécurité : isolation du contexte
@@ -80,6 +81,8 @@ function createWindow() {
   // Sur Linux, utiliser le type 'notification' pour éviter l'apparition dans la taskbar
   if (process.platform === 'linux') {
     options.type = 'notification'
+    // Ne pas définir d'icône sur Linux pour éviter l'apparition dans la taskbar
+    delete options.icon
   }
 
   // Créer la fenêtre
