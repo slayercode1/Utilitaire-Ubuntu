@@ -8,7 +8,11 @@
 
 Une application de recherche type **Spotlight** pour Linux, construite avec Electron. Finder permet de rechercher et lancer rapidement des applications, fichiers, et effectuer des calculs, le tout avec un simple raccourci clavier.
 
-![Finder Demo](screenshot.png)
+## 📸 Preview
+
+<p align="center">
+  <img src="preview.png" alt="Finder Preview" width="600">
+</p>
 
 ## ✨ Fonctionnalités
 
@@ -57,7 +61,7 @@ Une application de recherche type **Spotlight** pour Linux, construite avec Elec
 
 **Pour Ubuntu/Debian :**
 
-1. **Télécharger le fichier `.deb`** depuis les [releases](https://github.com/votre-nom/finder/releases)
+1. **Télécharger le fichier `.deb`** depuis les [releases](https://github.com/slayercode1/Utilitaire-Ubuntu/releases)
 
 2. **Installer le package** :
 ```bash
@@ -86,8 +90,8 @@ sudo apt remove finder
 
 1. **Cloner le dépôt**
 ```bash
-git clone https://github.com/votre-nom/finder.git
-cd finder
+git clone https://github.com/slayercode1/Utilitaire-Ubuntu.git
+cd Utilitaire-Ubuntu
 ```
 
 2. **Installer les dépendances**
@@ -298,6 +302,14 @@ win.webContents.openDevTools()
 
 ### Voir les logs
 Les logs s'affichent dans le terminal où vous avez lancé `npm start`
+
+## 🐛 Bugs connus
+
+### 🎮 Discord (et autres apps Electron) ne s'ouvre pas
+Certaines applications comme Discord ne se lancent pas depuis Finder. Les fichiers `.desktop` contiennent des paramètres spéciaux qui ne sont pas correctement gérés.
+
+### 🖥️ Multi-écrans
+Sur une configuration multi-écrans, Finder s'ouvre toujours sur l'écran principal au lieu de l'écran où se trouve le curseur.
 
 ## 🤝 Contribution
 
