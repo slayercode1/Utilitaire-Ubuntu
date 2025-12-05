@@ -14,6 +14,31 @@
 const fs = require('fs')
 const path = require('path')
 
+// === SÉCURITÉ : VALIDATION DES CHEMINS ===
+
+/**
+ * Vérifie si un chemin est sûr pour l'indexation
+ * @param {string} filePath - Chemin à vérifier
+ * @returns {boolean} true si sûr
+ */
+function isSecurePath(filePath) {
+  try {
+    // Interdire les chemins contenant des caractères dangereux
+    if (/[<>"|?*\x00-\x1f]/.test(filePath)) {
+      return false
+    }
+
+    // Interdire les chemins trop longs (prévenir DoS)
+    if (filePath.length > 4096) {
+      return false
+    }
+
+    return true
+  } catch (error) {
+    return false
+  }
+}
+
 // === CONFIGURATION ===
 
 /**
@@ -117,6 +142,33 @@ function scanDirectoryRecursive(dir, maxDepth = MAX_SCAN_DEPTH, currentDepth = 0
 
     for (const entry of entries) {
       const fullPath = path.join(dir, entry.name)
+
+      // SÉCURITÉ : Vérifier que le chemin est sûr
+      if (!isSecurePath(fullPath)) {
+        continue
+      }
+
+      // SÉCURITÉ : Vérifier et valider les liens symboliques
+      try {
+        const stats = fs.lstatSync(fullPath)
+        if (stats.isSymbolicLink()) {
+          // Résoudre le lien symbolique pour vérifier sa cible
+          const realPath = fs.realpathSync(fullPath)
+
+          // Vérifier que la cible n'échappe pas des répertoires autorisés
+          const homeDir = process.env.HOME
+          const allowedPaths = [homeDir, '/usr/share', '/opt', '/var/lib/flatpak', '/var/lib/snapd']
+          const isAllowed = allowedPaths.some(allowed => realPath.startsWith(allowed))
+
+          if (!isAllowed || !isSecurePath(realPath)) {
+            // Ignorer les symlinks pointant vers des zones dangereuses
+            continue
+          }
+        }
+      } catch (error) {
+        // Ignorer les symlinks cassés ou inaccessibles
+        continue
+      }
 
       // Ignorer les fichiers/dossiers cachés (sauf à la racine HOME)
       if (entry.name.startsWith('.') && currentDepth > 0) {

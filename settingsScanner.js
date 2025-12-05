@@ -5,9 +5,9 @@
  * et fournit des actions rapides (WiFi, Bluetooth, Son, etc.)
  */
 
-const { exec } = require('child_process')
+const { execFile } = require('child_process')
 const util = require('util')
-const execAsync = util.promisify(exec)
+const execFileAsync = util.promisify(execFile)
 
 /**
  * Liste des paramètres système avec leurs actions rapides
@@ -26,15 +26,15 @@ const SYSTEM_SETTINGS = [
         command: async () => {
           // Vérifier l'état actuel du WiFi
           try {
-            const { stdout } = await execAsync('nmcli radio wifi')
+            const { stdout } = await execFileAsync('nmcli', ['radio', 'wifi'])
             const isEnabled = stdout.trim() === 'enabled'
 
             // Inverser l'état
             if (isEnabled) {
-              await execAsync('nmcli radio wifi off')
+              await execFileAsync('nmcli', ['radio', 'wifi', 'off'])
               return 'WiFi désactivé'
             } else {
-              await execAsync('nmcli radio wifi on')
+              await execFileAsync('nmcli', ['radio', 'wifi', 'on'])
               return 'WiFi activé'
             }
           } catch (error) {
@@ -64,14 +64,14 @@ const SYSTEM_SETTINGS = [
         icon: '🔄',
         command: async () => {
           try {
-            const { stdout } = await execAsync('rfkill list bluetooth')
+            const { stdout } = await execFileAsync('rfkill', ['list', 'bluetooth'])
             const isBlocked = stdout.includes('Soft blocked: yes')
 
             if (isBlocked) {
-              await execAsync('rfkill unblock bluetooth')
+              await execFileAsync('rfkill', ['unblock', 'bluetooth'])
               return 'Bluetooth activé'
             } else {
-              await execAsync('rfkill block bluetooth')
+              await execFileAsync('rfkill', ['block', 'bluetooth'])
               return 'Bluetooth désactivé'
             }
           } catch (error) {
@@ -101,8 +101,8 @@ const SYSTEM_SETTINGS = [
         icon: '🔇',
         command: async () => {
           try {
-            await execAsync('pactl set-sink-mute @DEFAULT_SINK@ toggle')
-            const { stdout } = await execAsync('pactl get-sink-mute @DEFAULT_SINK@')
+            await execFileAsync('pactl', ['set-sink-mute', '@DEFAULT_SINK@', 'toggle'])
+            const { stdout } = await execFileAsync('pactl', ['get-sink-mute', '@DEFAULT_SINK@'])
             const isMuted = stdout.includes('yes')
             return isMuted ? 'Son coupé' : 'Son rétabli'
           } catch (error) {
@@ -353,15 +353,15 @@ async function getSettingState(settingId) {
   try {
     switch (settingId) {
       case 'wifi':
-        const { stdout: wifiState } = await execAsync('nmcli radio wifi')
+        const { stdout: wifiState } = await execFileAsync('nmcli', ['radio', 'wifi'])
         return wifiState.trim() === 'enabled'
 
       case 'bluetooth':
-        const { stdout: btState } = await execAsync('rfkill list bluetooth')
+        const { stdout: btState } = await execFileAsync('rfkill', ['list', 'bluetooth'])
         return !btState.includes('Soft blocked: yes')
 
       case 'sound':
-        const { stdout: soundState } = await execAsync('pactl get-sink-mute @DEFAULT_SINK@')
+        const { stdout: soundState } = await execFileAsync('pactl', ['get-sink-mute', '@DEFAULT_SINK@'])
         return !soundState.includes('yes') // true si pas muted
 
       default:

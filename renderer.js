@@ -12,23 +12,93 @@ let selectedIndex = 0
 let calculationResult = null
 let searchHistory = []
 
+// === SÉCURITÉ : FONCTIONS D'ÉCHAPPEMENT ET VALIDATION ===
+
+/**
+ * Échappe les caractères HTML pour prévenir XSS
+ * @param {string} text - Texte à échapper
+ * @returns {string} Texte sécurisé
+ */
+function escapeHtml(text) {
+  if (!text) return ''
+  const div = document.createElement('div')
+  div.textContent = text
+  return div.innerHTML
+}
+
+/**
+ * Valide une URL pour empêcher javascript: et data: malveillants
+ * @param {string} url - URL à valider
+ * @returns {boolean} true si l'URL est sûre
+ */
+function isValidUrl(url) {
+  if (!url || typeof url !== 'string') return false
+
+  // Bloquer les URLs potentiellement dangereuses
+  const dangerousProtocols = /^(javascript|data|vbscript):/i
+  if (dangerousProtocols.test(url)) {
+    console.error('Dangerous URL protocol blocked:', url)
+    return false
+  }
+
+  return true
+}
+
+/**
+ * Valide les données de l'historique
+ * @param {any} data - Données à valider
+ * @returns {boolean} true si valide
+ */
+function validateHistoryData(data) {
+  if (!Array.isArray(data)) return false
+
+  // Limiter la taille de l'historique
+  if (data.length > 100) return false
+
+  // Valider chaque entrée
+  for (const entry of data) {
+    if (typeof entry !== 'object' || !entry) return false
+    if (typeof entry.query !== 'string' || entry.query.length > 500) return false
+    if (typeof entry.timestamp !== 'number') return false
+    if (typeof entry.type !== 'string') return false
+    if (typeof entry.name !== 'string' || entry.name.length > 500) return false
+  }
+
+  return true
+}
+
 // Charger l'historique depuis localStorage
 function loadHistory() {
   try {
     const saved = localStorage.getItem('finderHistory')
     if (saved) {
-      searchHistory = JSON.parse(saved)
+      const parsed = JSON.parse(saved)
+
+      // SÉCURITÉ : Valider les données avant de les utiliser
+      if (validateHistoryData(parsed)) {
+        searchHistory = parsed
+      } else {
+        console.warn('Invalid history data detected, clearing history')
+        searchHistory = []
+        localStorage.removeItem('finderHistory')
+      }
     }
   } catch (error) {
     console.error('Error loading history:', error)
     searchHistory = []
+    localStorage.removeItem('finderHistory')
   }
 }
 
 // Sauvegarder l'historique dans localStorage
 function saveHistory() {
   try {
-    localStorage.setItem('finderHistory', JSON.stringify(searchHistory))
+    // SÉCURITÉ : Valider avant de sauvegarder
+    if (validateHistoryData(searchHistory)) {
+      localStorage.setItem('finderHistory', JSON.stringify(searchHistory))
+    } else {
+      console.error('Invalid history data, not saving')
+    }
   } catch (error) {
     console.error('Error saving history:', error)
   }
@@ -39,12 +109,16 @@ function addToHistory(query, resultType, result) {
   // Ne pas ajouter les calculs ou recherches vides
   if (!query.trim() || calculationResult !== null) return
 
+  // SÉCURITÉ : Valider et limiter la longueur
+  const sanitizedQuery = query.trim().substring(0, 500)
+  const sanitizedName = (result.name || query.trim()).substring(0, 500)
+
   // Créer l'entrée d'historique
   const entry = {
-    query: query.trim(),
+    query: sanitizedQuery,
     timestamp: Date.now(),
     type: resultType,
-    name: result.name || query.trim()
+    name: sanitizedName
   }
 
   // Supprimer les doublons (même query)
@@ -144,7 +218,7 @@ function displayHistory() {
     // Bouton de suppression
     const deleteBtn = document.createElement('button')
     deleteBtn.className = 'delete-history-btn'
-    deleteBtn.innerHTML = '×'
+    deleteBtn.textContent = '×'
     deleteBtn.title = 'Supprimer de l\'historique'
     deleteBtn.addEventListener('click', (e) => {
       e.stopPropagation()
@@ -382,8 +456,19 @@ function getSettingIcon(settingId) {
 }
 
 function openGoogleSearch(query) {
-  const searchUrl = `https://www.google.com/search?q=${encodeURIComponent(query)}`
-  window.electronAPI.openFile(searchUrl)
+  // SÉCURITÉ : Valider et limiter la requête
+  if (!query || typeof query !== 'string') return
+  const sanitizedQuery = query.trim().substring(0, 1000)
+
+  const searchUrl = `https://www.google.com/search?q=${encodeURIComponent(sanitizedQuery)}`
+
+  // SÉCURITÉ : Valider l'URL avant de l'ouvrir
+  if (isValidUrl(searchUrl)) {
+    window.electronAPI.openFile(searchUrl)
+  } else {
+    console.error('Invalid search URL')
+    return
+  }
 
   searchInput.value = ''
   filteredResults = []

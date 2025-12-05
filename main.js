@@ -9,9 +9,210 @@
 const { app, BrowserWindow, globalShortcut, ipcMain } = require('electron/main')
 const path = require('node:path')
 const { spawn } = require('child_process')
+const fs = require('fs')
 const { scanApplications } = require('./appScanner')
 const { scanFiles } = require('./fileScanner')
 const { searchSettings, getSettingById, getSettingState } = require('./settingsScanner')
+
+// === SÉCURITÉ : FONCTIONS DE VALIDATION ===
+
+/**
+ * Valide et nettoie un chemin de fichier pour prévenir les attaques Path Traversal
+ * @param {string} filePath - Chemin à valider
+ * @returns {string|null} Chemin sécurisé ou null si invalide
+ */
+function validateAndSanitizePath(filePath) {
+  if (!filePath || typeof filePath !== 'string') {
+    console.error('Invalid file path: not a string')
+    return null
+  }
+
+  try {
+    // Résoudre le chemin absolu et normaliser
+    const resolvedPath = path.resolve(filePath)
+
+    // Vérifier que le fichier existe
+    if (!fs.existsSync(resolvedPath)) {
+      console.error('File does not exist')
+      return null
+    }
+
+    // Obtenir le répertoire HOME de l'utilisateur
+    const homeDir = process.env.HOME || process.env.USERPROFILE
+
+    // Autoriser uniquement les fichiers dans HOME ou des répertoires système sûrs
+    const allowedPaths = [
+      homeDir,
+      '/usr/share',
+      '/opt',
+      '/var/lib/flatpak',
+      '/var/lib/snapd'
+    ]
+
+    const isAllowed = allowedPaths.some(allowedPath =>
+      resolvedPath.startsWith(allowedPath)
+    )
+
+    if (!isAllowed) {
+      console.error('Access denied: path outside allowed directories')
+      return null
+    }
+
+    // Interdire les fichiers sensibles
+    const forbiddenPatterns = [
+      '/etc/passwd',
+      '/etc/shadow',
+      '/etc/sudoers',
+      '/.ssh/',
+      '/id_rsa',
+      '/id_ed25519'
+    ]
+
+    const isForbidden = forbiddenPatterns.some(pattern =>
+      resolvedPath.includes(pattern)
+    )
+
+    if (isForbidden) {
+      console.error('Access denied: forbidden file pattern')
+      return null
+    }
+
+    return resolvedPath
+  } catch (error) {
+    console.error('Path validation error')
+    return null
+  }
+}
+
+/**
+ * Valide une commande d'exécution d'application
+ * @param {string} execCommand - Commande à valider
+ * @returns {string|null} Commande sécurisée ou null si invalide
+ */
+function validateExecCommand(execCommand) {
+  if (!execCommand || typeof execCommand !== 'string') {
+    return null
+  }
+
+  // Nettoyer la commande (enlever les %u, %f, etc. de .desktop files)
+  const cleanExec = execCommand.replace(/%[uUfFdDnNickvm]/g, '').trim()
+
+  if (!cleanExec) {
+    return null
+  }
+
+  // SÉCURITÉ : Limite de longueur pour éviter DoS
+  if (cleanExec.length > 1000) {
+    console.error('Command length exceeds limit')
+    return null
+  }
+
+  // Vérifier qu'il n'y a pas de caractères dangereux pour l'injection
+  const dangerousPatterns = [
+    /[;&|`$(){}]/,  // Métacaractères shell dangereux
+    /\$\(/,          // Command substitution
+    /`/,             // Backticks
+    /\|\|/,          // OR operator
+    /&&/,            // AND operator
+    />\s*\/dev/,     // Redirection vers /dev
+    /rm\s+-rf/i,     // Commandes destructives
+    /:\(\)\{/        // Fork bomb
+  ]
+
+  for (const pattern of dangerousPatterns) {
+    if (pattern.test(cleanExec)) {
+      console.error('Dangerous pattern detected in command')
+      return null
+    }
+  }
+
+  return cleanExec
+}
+
+/**
+ * Parse une ligne de commande en arguments (gère les guillemets)
+ * @param {string} commandLine - Ligne de commande à parser
+ * @returns {string[]} Tableau d'arguments
+ */
+function parseCommandArguments(commandLine) {
+  const args = []
+  let current = ''
+  let inQuotes = false
+  let quoteChar = ''
+
+  for (let i = 0; i < commandLine.length; i++) {
+    const char = commandLine[i]
+    const nextChar = commandLine[i + 1]
+
+    if ((char === '"' || char === "'") && !inQuotes) {
+      // Début de citation
+      inQuotes = true
+      quoteChar = char
+    } else if (char === quoteChar && inQuotes) {
+      // Fin de citation
+      inQuotes = false
+      quoteChar = ''
+    } else if (char === ' ' && !inQuotes) {
+      // Séparateur d'argument
+      if (current) {
+        args.push(current)
+        current = ''
+      }
+    } else if (char === '\\' && inQuotes && (nextChar === '"' || nextChar === "'")) {
+      // Échappement de guillemet
+      current += nextChar
+      i++ // Skip next char
+    } else {
+      current += char
+    }
+  }
+
+  if (current) {
+    args.push(current)
+  }
+
+  return args
+}
+
+/**
+ * Valide une commande shell utilisateur
+ * @param {string} command - Commande à valider
+ * @returns {string|null} Commande sécurisée ou null si invalide
+ */
+function validateUserCommand(command) {
+  if (!command || typeof command !== 'string') {
+    return null
+  }
+
+  const trimmed = command.trim()
+
+  if (trimmed.length === 0 || trimmed.length > 1000) {
+    console.error('Command length invalid')
+    return null
+  }
+
+  // Interdire les commandes extrêmement dangereuses
+  const blockedCommands = [
+    /^\s*rm\s+-rf\s+\//i,           // rm -rf /
+    /:\(\)\{.*:\|:&\};:/,            // Fork bomb
+    /dd\s+if=.*of=\/dev\/sd/i,      // Overwrite disk
+    /mkfs/i,                         // Format filesystem
+    />\s*\/dev\/sd/,                 // Write to disk
+    /wget.*\|\s*sh/i,                // Download and execute
+    /curl.*\|\s*sh/i,                // Download and execute
+    /nc\s+-l/i,                      // Netcat listener
+    /\/dev\/tcp/,                    // TCP connections
+  ]
+
+  for (const blocked of blockedCommands) {
+    if (blocked.test(trimmed)) {
+      console.error('Blocked dangerous command')
+      return null
+    }
+  }
+
+  return trimmed
+}
 
 // Import auto-launch avec gestion d'erreur si non installé
 let AutoLaunch
@@ -74,7 +275,9 @@ function createWindow() {
     webPreferences: {
       preload: path.join(__dirname, 'preload.js'),
       contextIsolation: true,   // Sécurité : isolation du contexte
-      nodeIntegration: false    // Sécurité : pas d'accès direct à Node.js
+      nodeIntegration: false,   // Sécurité : pas d'accès direct à Node.js
+      sandbox: true,            // SÉCURITÉ : Activer le sandboxing
+      enableRemoteModule: false // SÉCURITÉ : Désactiver le module remote
     }
   }
 
@@ -164,23 +367,31 @@ function toggleWindow() {
 // === GESTION DES PROCESSUS EXTERNES ===
 
 /**
- * Lance un processus de manière détachée
- * @param {string} command - La commande à exécuter
+ * Lance un processus de manière détachée SÉCURISÉE
+ * @param {string[]} args - Arguments de la commande (pas de shell string!)
  * @param {string} description - Description pour les logs
  * @returns {boolean} - true si lancé avec succès, false sinon
  */
-function launchDetachedProcess(command, description) {
+function launchDetachedProcess(args, description) {
   try {
-    const child = spawn('sh', ['-c', command], {
+    if (!Array.isArray(args) || args.length === 0) {
+      console.error('Invalid arguments for launching process')
+      return false
+    }
+
+    // Utiliser spawn avec des arguments séparés (PAS de shell -c)
+    // pour éviter l'injection de commandes
+    const child = spawn(args[0], args.slice(1), {
       detached: true,
-      stdio: 'ignore'
+      stdio: 'ignore',
+      shell: false  // CRITIQUE : désactiver le shell
     })
 
     child.unref()
     console.log(`${description} launched successfully`)
     return true
   } catch (error) {
-    console.error(`Error launching ${description}:`, error)
+    console.error(`Error launching ${description}:`, error.message)
     return false
   }
 }
@@ -213,14 +424,25 @@ function setupIpcHandlers() {
   ipcMain.on('launch-app', (event, execCommand) => {
     if (!execCommand) return
 
-    // Nettoyer la commande exec (enlever les %u, %f, etc. de .desktop files)
-    const cleanExec = execCommand.replace(/%[uUfF]/g, '').trim()
-    console.log('Launching app with command:', cleanExec)
+    // SÉCURITÉ : Valider la commande
+    const cleanExec = validateExecCommand(execCommand)
+    if (!cleanExec) {
+      console.error('Invalid or dangerous command blocked')
+      return
+    }
 
-    // Wrapper avec nohup pour détachement complet
-    const wrappedCommand = `nohup ${cleanExec} > /dev/null 2>&1 &`
+    console.log('Launching app with validated command')
 
-    launchDetachedProcess(wrappedCommand, 'Application')
+    // SÉCURITÉ : Parser correctement les arguments (gère les guillemets)
+    const args = parseCommandArguments(cleanExec)
+
+    if (args.length === 0) {
+      console.error('No arguments parsed from command')
+      return
+    }
+
+    // Lancer de manière sécurisée
+    launchDetachedProcess(args, 'Application')
 
     // Cacher la fenêtre après le lancement
     if (win) {
@@ -232,12 +454,17 @@ function setupIpcHandlers() {
   ipcMain.on('open-file', (event, filePath) => {
     if (!filePath) return
 
-    console.log('Opening file:', filePath)
+    // SÉCURITÉ : Valider le chemin du fichier
+    const validPath = validateAndSanitizePath(filePath)
+    if (!validPath) {
+      console.error('Invalid or forbidden file path blocked')
+      return
+    }
 
-    // Utiliser xdg-open pour ouvrir avec l'application par défaut
-    const wrappedCommand = `nohup xdg-open "${filePath}" > /dev/null 2>&1 &`
+    console.log('Opening validated file')
 
-    launchDetachedProcess(wrappedCommand, 'File')
+    // Utiliser xdg-open avec des arguments séparés (pas de shell)
+    launchDetachedProcess(['xdg-open', validPath], 'File')
 
     // Cacher la fenêtre après l'ouverture
     if (win) {
@@ -249,27 +476,32 @@ function setupIpcHandlers() {
   ipcMain.on('open-location', (_event, filePath) => {
     if (!filePath) return
 
-    console.log('Opening location:', filePath)
+    // SÉCURITÉ : Valider le chemin du fichier
+    const validPath = validateAndSanitizePath(filePath)
+    if (!validPath) {
+      console.error('Invalid or forbidden file path blocked')
+      return
+    }
+
+    console.log('Opening validated location')
 
     // Utiliser xdg-open sur le dossier parent pour les fichiers
     // ou directement sur le dossier lui-même
-    const fs = require('fs')
-    let targetPath = filePath
+    let targetPath = validPath
 
     try {
-      const stats = fs.statSync(filePath)
+      const stats = fs.statSync(validPath)
       if (!stats.isDirectory()) {
         // Si c'est un fichier, ouvrir le dossier parent
-        targetPath = path.dirname(filePath)
+        targetPath = path.dirname(validPath)
       }
     } catch (error) {
-      console.error('Error checking file type:', error)
-      targetPath = path.dirname(filePath)
+      console.error('Error checking file type:', error.message)
+      targetPath = path.dirname(validPath)
     }
 
-    const wrappedCommand = `nohup xdg-open "${targetPath}" > /dev/null 2>&1 &`
-
-    launchDetachedProcess(wrappedCommand, 'Location')
+    // Lancer de manière sécurisée
+    launchDetachedProcess(['xdg-open', targetPath], 'Location')
 
     // Cacher la fenêtre après l'ouverture
     if (win) {
@@ -281,14 +513,49 @@ function setupIpcHandlers() {
   ipcMain.on('execute-command', (_event, command) => {
     if (!command) return
 
-    console.log('Executing command in terminal:', command)
+    // SÉCURITÉ : Valider la commande utilisateur
+    const validCommand = validateUserCommand(command)
+    if (!validCommand) {
+      console.error('Invalid or dangerous command blocked')
+      return
+    }
 
-    // Ouvrir dans x-terminal-emulator avec la commande
-    // Le terminal reste ouvert après exécution pour voir les résultats
-    const escapedCommand = command.replace(/"/g, '\\"')
-    const wrappedCommand = `nohup x-terminal-emulator -e "bash -c '${escapedCommand}; echo; echo Appuyez sur Entrée pour fermer...; read'" > /dev/null 2>&1 &`
+    console.log('Executing validated command in terminal')
 
-    launchDetachedProcess(wrappedCommand, 'Command in terminal')
+    // SÉCURITÉ : Créer un fichier script temporaire au lieu d'interpolation
+    // Cela empêche toute injection même avec des caractères Unicode ou échappements
+    const crypto = require('crypto')
+    const scriptId = crypto.randomBytes(8).toString('hex')
+    const scriptPath = path.join(require('os').tmpdir(), `finder-cmd-${scriptId}.sh`)
+
+    try {
+      // Écrire le script dans un fichier temporaire
+      const scriptContent = `#!/bin/bash
+${validCommand}
+echo
+echo "Appuyez sur Entrée pour fermer..."
+read
+`
+      fs.writeFileSync(scriptPath, scriptContent, { mode: 0o700 })
+
+      // Lancer le terminal avec le script
+      launchDetachedProcess(['x-terminal-emulator', '-e', scriptPath], 'Command in terminal')
+
+      // Nettoyer le script après 60 secondes (backup si l'auto-suppression échoue)
+      setTimeout(() => {
+        try {
+          if (fs.existsSync(scriptPath)) {
+            fs.unlinkSync(scriptPath)
+          }
+        } catch (err) {
+          // Ignore cleanup errors
+        }
+      }, 60000)
+
+    } catch (error) {
+      console.error('Error creating command script:', error.message)
+      return
+    }
 
     // Cacher la fenêtre après l'ouverture
     if (win) {
@@ -338,12 +605,15 @@ function setupIpcHandlers() {
         let success = false
         for (const cmd of commands) {
           try {
-            const wrappedCommand = `nohup ${cmd} > /dev/null 2>&1 &`
-            launchDetachedProcess(wrappedCommand, 'Setting action')
-            success = true
-            break
+            // SÉCURITÉ : Parser correctement les arguments (gère les guillemets)
+            const args = parseCommandArguments(cmd.trim())
+            if (args.length > 0) {
+              launchDetachedProcess(args, 'Setting action')
+              success = true
+              break
+            }
           } catch (error) {
-            console.log(`Command ${cmd} failed, trying next...`)
+            console.log('Command failed, trying next alternative')
           }
         }
 
@@ -352,7 +622,7 @@ function setupIpcHandlers() {
         }
       }
     } catch (error) {
-      console.error('Error executing action:', error)
+      console.error('Error executing action:', error.message)
     }
 
     // Cacher la fenêtre après l'action
