@@ -1,6 +1,6 @@
 {
   "name": "finder",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "Application de recherche type Spotlight pour Linux",
   "author": "Finder Team",
   "main": "dist/main/index.js",
