@@ -1,0 +1,433 @@
+/* ================================================================
+   DESIGN TOKENS
+
+   Palette réduite à une surface, quatre niveaux de texte et un
+   accent unique. L'accent ne décore jamais : il ne sert qu'à
+   désigner la ligne active et les états sémantiques.
+   ================================================================ */
+:root {
+  /* Surfaces */
+  --surface: 22 22 24;
+  --surface-raised: 255 255 255;
+
+  /* Texte : la hiérarchie repose sur l'opacité, pas sur la teinte */
+  --text-primary: 255 255 255;
+  --text-strong: 0.94;
+  --text-muted: 0.56;
+  --text-faint: 0.38;
+  --text-ghost: 0.24;
+
+  /* Accent unique, réservé à la sélection et au focus */
+  --accent: 122 162 255;
+
+  /* Sémantique, uniquement pour les actions destructives */
+  --danger: 255 128 128;
+  --success: 126 200 148;
+
+  /* Rythme d'espacement : multiples de 4 */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+
+  /* Rayons discrets et cohérents */
+  --radius: 10px;
+  --radius-sm: 6px;
+
+  /* Une seule courbe et deux durées pour toute l'application */
+  --ease: cubic-bezier(0.16, 1, 0.3, 1);
+  --duration: 160ms;
+  --duration-slow: 220ms;
+}
+
+*,
+*::before,
+*::after {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Inter',
+    'Roboto', 'Helvetica Neue', Arial, sans-serif;
+  background: transparent;
+  overflow: hidden;
+  /* Le rendu fin évite l'effet gras des textes clairs sur fond sombre */
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+/* ================================================================
+   STRUCTURE
+   ================================================================ */
+.container {
+  width: 100%;
+  height: 100vh;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding: var(--space-2);
+}
+
+.search-box {
+  width: 100%;
+  /* Une seule surface continue : le champ et les résultats forment
+     un même objet, sans séparation visuelle entre eux. */
+  background: rgb(var(--surface) / 0.92);
+  backdrop-filter: blur(24px) saturate(140%);
+  border-radius: var(--radius);
+  overflow: hidden;
+  /* Aucune ombre portée : le contraste de la surface suffit à détacher
+     la fenêtre du bureau. Seul un liseré d'un pixel en délimite le bord,
+     sans quoi les angles arrondis se perdent sur un fond clair. */
+  box-shadow: 0 0 0 1px rgb(var(--surface-raised) / 0.08);
+}
+
+/* ================================================================
+   CHAMP DE RECHERCHE
+
+   Élément dominant de l'écran. Aucune bordure, aucun fond propre :
+   sa taille et son espacement suffisent à le désigner.
+   ================================================================ */
+.search-input-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.search-input {
+  flex: 1;
+  min-width: 0;
+  padding: var(--space-5) var(--space-6);
+  font: inherit;
+  font-size: 17px;
+  font-weight: 400;
+  letter-spacing: -0.01em;
+  border: none;
+  outline: none;
+  background: transparent;
+  color: rgb(var(--text-primary) / var(--text-strong));
+}
+
+.search-input::placeholder {
+  color: rgb(var(--text-primary) / var(--text-faint));
+}
+
+/* Le focus est permanent sur cet écran : pas d'anneau de focus,
+   qui n'apporterait aucune information. */
+.search-input:focus {
+  outline: none;
+}
+
+/* Résultat de calcul, aligné à droite du champ */
+.calculation-result {
+  padding-right: var(--space-6);
+  padding-left: var(--space-3);
+  font-size: 17px;
+  font-variant-numeric: tabular-nums;
+  color: rgb(var(--text-primary) / var(--text-muted));
+  white-space: nowrap;
+  pointer-events: none;
+}
+
+/* ================================================================
+   RÉSULTATS
+
+   Pas de séparateurs : le rythme vertical et le retrait constant
+   de l'icône suffisent à lire la liste.
+   ================================================================ */
+.results-container {
+  max-height: 380px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: var(--space-2);
+  /* Filet d'un pixel : seule séparation de l'interface, elle marque la
+     frontière entre la saisie et les résultats, que l'espacement seul
+     ne suffit pas à établir quand la liste est longue. */
+  border-top: 1px solid rgb(var(--surface-raised) / 0.05);
+}
+
+/* La liste n'existe visuellement que si elle contient des résultats */
+.results-container:empty {
+  display: none;
+}
+
+.results-container::-webkit-scrollbar {
+  width: 10px;
+}
+
+.results-container::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.results-container::-webkit-scrollbar-thumb {
+  background: rgb(var(--text-primary) / 0.12);
+  border-radius: 10px;
+  /* Bordure transparente : la barre paraît plus fine sans l'être,
+     ce qui préserve la surface de préhension. */
+  border: 3px solid transparent;
+  background-clip: content-box;
+}
+
+.results-container::-webkit-scrollbar-thumb:hover {
+  background: rgb(var(--text-primary) / 0.2);
+  background-clip: content-box;
+}
+
+.result-item {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  /* Seule la couleur de fond s'anime : aucun déplacement de
+     géométrie, donc aucun recalcul de mise en page. */
+  transition: background-color var(--duration) var(--ease);
+}
+
+.result-item:hover {
+  background: rgb(var(--text-primary) / 0.04);
+}
+
+/* La sélection est le seul état porteur d'information forte :
+   c'est le seul endroit où l'accent apparaît. */
+.result-item.selected {
+  background: rgb(var(--accent) / 0.14);
+}
+
+.result-icon {
+  width: 26px;
+  height: 26px;
+  flex-shrink: 0;
+  object-fit: contain;
+  border-radius: var(--radius-sm);
+}
+
+.result-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.result-name {
+  font-size: 13.5px;
+  font-weight: 450;
+  letter-spacing: -0.005em;
+  color: rgb(var(--text-primary) / var(--text-strong));
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* La description n'apparaît que si elle porte du texte : une ligne
+   vide creuserait un espace sans raison. */
+.result-description:not(:empty) {
+  margin-top: 1px;
+  font-size: 11.5px;
+  line-height: 1.35;
+  color: rgb(var(--text-primary) / var(--text-faint));
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.no-results {
+  padding: var(--space-5) var(--space-3);
+  text-align: center;
+  font-size: 13px;
+  color: rgb(var(--text-primary) / var(--text-faint));
+}
+
+/* ================================================================
+   SNIPPETS (aide aux préfixes de recherche)
+   ================================================================ */
+.snippet-symbol {
+  width: 26px;
+  flex-shrink: 0;
+  text-align: center;
+  font-size: 13px;
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+  color: rgb(var(--text-primary) / var(--text-ghost));
+}
+
+.snippet-item {
+  cursor: default;
+}
+
+.snippet-item:hover {
+  background: transparent;
+}
+
+/* ================================================================
+   ACTIONS CONTEXTUELLES
+
+   Elles n'apparaissent que sur la ligne active. Leur discrétion
+   évite de concurrencer l'action principale (ouvrir le résultat).
+   ================================================================ */
+.open-file-btn,
+.delete-history-btn {
+  flex-shrink: 0;
+  border: none;
+  background: transparent;
+  font: inherit;
+  cursor: pointer;
+  border-radius: var(--radius-sm);
+  /* Retirées du flux tant qu'elles sont inutiles, mais toujours
+     présentes dans le DOM pour rester atteignables au clavier. */
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity var(--duration) var(--ease),
+    color var(--duration) var(--ease);
+}
+
+.open-file-btn {
+  padding: var(--space-1) var(--space-2);
+  font-size: 11.5px;
+  color: rgb(var(--text-primary) / var(--text-muted));
+}
+
+.delete-history-btn {
+  width: 22px;
+  height: 22px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+  line-height: 1;
+  color: rgb(var(--text-primary) / var(--text-faint));
+}
+
+.result-item:hover .open-file-btn,
+.result-item.selected .open-file-btn,
+.result-item:hover .delete-history-btn,
+.result-item.selected .delete-history-btn {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.open-file-btn:hover {
+  background: rgb(var(--text-primary) / 0.08);
+  color: rgb(var(--text-primary) / var(--text-strong));
+}
+
+.delete-history-btn:hover {
+  color: rgb(var(--danger));
+}
+
+.open-file-btn:focus-visible,
+.delete-history-btn:focus-visible,
+.toggle-switch:focus-within {
+  opacity: 1;
+  pointer-events: auto;
+  outline: 2px solid rgb(var(--accent) / 0.7);
+  outline-offset: 1px;
+}
+
+/* ================================================================
+   INTERRUPTEUR (paramètres système)
+   ================================================================ */
+.toggle-switch {
+  position: relative;
+  flex-shrink: 0;
+  width: 32px;
+  height: 18px;
+  border-radius: 999px;
+  cursor: pointer;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity var(--duration) var(--ease);
+}
+
+.result-item:hover .toggle-switch,
+.result-item.selected .toggle-switch {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.toggle-checkbox {
+  position: absolute;
+  opacity: 0;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  cursor: pointer;
+}
+
+.toggle-slider {
+  position: absolute;
+  inset: 0;
+  background: rgb(var(--text-primary) / 0.16);
+  border-radius: 999px;
+  transition: background-color var(--duration-slow) var(--ease);
+}
+
+.toggle-slider::before {
+  content: '';
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 14px;
+  height: 14px;
+  background: rgb(var(--text-primary) / 0.85);
+  border-radius: 50%;
+  /* transform seul : animation composée sur le GPU, sans reflow */
+  transition: transform var(--duration-slow) var(--ease);
+}
+
+.toggle-checkbox:checked + .toggle-slider {
+  background: rgb(var(--success) / 0.85);
+}
+
+.toggle-checkbox:checked + .toggle-slider::before {
+  transform: translateX(14px);
+  background: rgb(255 255 255 / 0.98);
+}
+
+/* ================================================================
+   COMPTEUR D'INDEXATION
+
+   Information de second plan : visible pendant l'indexation, puis
+   effacée une fois la donnée stabilisée, où elle n'apprend plus rien.
+   ================================================================ */
+.index-counter {
+  padding: var(--space-2) var(--space-4) var(--space-3);
+  font-size: 10.5px;
+  font-variant-numeric: tabular-nums;
+  color: rgb(var(--text-primary) / var(--text-ghost));
+  text-align: right;
+  pointer-events: none;
+  transition: opacity var(--duration-slow) var(--ease);
+}
+
+.index-counter:empty {
+  display: none;
+}
+
+/* ================================================================
+   ACCESSIBILITÉ
+   ================================================================ */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+  }
+}
+
+/* Les fonds translucides reposent sur le contraste du bureau ;
+   en contraste élevé, on rend la surface opaque. */
+@media (prefers-contrast: more) {
+  .search-box {
+    background: rgb(var(--surface));
+    backdrop-filter: none;
+  }
+
+  .result-item.selected {
+    background: rgb(var(--accent) / 0.3);
+  }
+}

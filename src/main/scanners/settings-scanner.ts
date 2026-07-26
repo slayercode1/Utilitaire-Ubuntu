@@ -5,8 +5,11 @@
  * et fournit des actions rapides (WiFi, Bluetooth, Son, etc.)
  */
 
-const { execFile } = require('child_process')
-const util = require('util')
+import { execFile } from 'node:child_process'
+import util from 'node:util'
+
+import type { SettingDefinition } from '../services/setting-actions.js'
+import type { SerializedSetting } from '../../shared/types.js'
 const execFileAsync = util.promisify(execFile)
 
 /**
@@ -269,12 +272,19 @@ const SYSTEM_SETTINGS = [
 /**
  * Recherche dans les paramètres système
  * @param {string} query - Requête de recherche
- * @returns {Array} Liste des paramètres correspondants
+ * @returns {object[]} Paramètres correspondants
  */
 /**
  * Sérialise un paramètre pour l'envoyer via IPC (enlève les fonctions)
  */
-function serializeSetting(setting) {
+function serializeSetting(
+  setting: SettingDefinition & {
+    id: string
+    name: string
+    keywords: string[]
+    icon: string
+  }
+): Omit<SerializedSetting, 'score'> {
   return {
     id: setting.id,
     name: setting.name,
@@ -282,51 +292,76 @@ function serializeSetting(setting) {
     icon: setting.icon,
     resultType: 'setting',
     // Sérialiser les actions en enlevant les fonctions
-    actions: setting.actions.map(action => ({
+    actions: (setting.actions ?? []).map((action) => ({
       id: action.id,
-      name: action.name,
-      icon: action.icon
+      // Le contrat IPC impose ces champs : un libellé absent deviendrait
+      // "undefined" à l'affichage plutôt qu'une chaîne vide.
+      name: action.name ?? '',
+      icon: action.icon ?? ''
       // command est géré côté main process, pas besoin de l'envoyer
     }))
   }
 }
 
-function searchSettings(query) {
+/**
+ * Index de recherche préparé une seule fois au chargement du module.
+ *
+ * searchSettings est appelée à chaque frappe de l'utilisateur ; refaire les
+ * toLowerCase() et reconstruire les objets sérialisés à chaque appel est un
+ * travail répété inutilement. Les formes minuscules et la version sérialisée
+ * sont donc calculées d'avance.
+ */
+const SETTINGS_INDEX = SYSTEM_SETTINGS.map(setting => ({
+  setting,
+  serialized: serializeSetting(setting),
+  lowerName: setting.name.toLowerCase(),
+  lowerKeywords: setting.keywords.map(k => k.toLowerCase())
+}))
+
+/**
+ * Recherche dans les paramètres système
+ * @param {string} query - Requête de recherche
+ * @returns {object[]} Paramètres correspondants, triés par pertinence
+ */
+function searchSettings(query: string): SerializedSetting[] {
   // Si pas de requête, retourner tous les paramètres
   if (!query || query.trim().length === 0) {
-    return SYSTEM_SETTINGS.map(setting => ({
-      ...serializeSetting(setting),
-      score: 0
-    }))
+    return SETTINGS_INDEX.map(entry => ({ ...entry.serialized, score: 0 }))
   }
 
   const lowerQuery = query.toLowerCase().trim()
   const results = []
 
-  for (const setting of SYSTEM_SETTINGS) {
-    // Vérifier si la requête correspond au nom ou aux mots-clés
-    const matchesName = setting.name.toLowerCase().includes(lowerQuery)
-    const matchesKeywords = setting.keywords.some(keyword =>
-      keyword.toLowerCase().includes(lowerQuery) ||
-      lowerQuery.includes(keyword.toLowerCase())
-    )
+  for (const entry of SETTINGS_INDEX) {
+    const matchesName = entry.lowerName.includes(lowerQuery)
 
-    if (matchesName || matchesKeywords) {
-      // Calculer un score de pertinence
-      let score = 0
-      if (matchesName) score += 10
-      if (matchesKeywords) score += 5
+    let matchesKeywords = false
+    let matchesPrefix = false
 
-      // Bonus si la requête est exactement le début d'un mot-clé
-      if (setting.keywords.some(kw => kw.toLowerCase().startsWith(lowerQuery))) {
-        score += 15
+    for (const keyword of entry.lowerKeywords) {
+      if (keyword.startsWith(lowerQuery)) {
+        matchesPrefix = true
+        matchesKeywords = true
+        break
       }
 
-      results.push({
-        ...serializeSetting(setting),
-        score
-      })
+      if (!matchesKeywords &&
+          (keyword.includes(lowerQuery) || lowerQuery.includes(keyword))) {
+        matchesKeywords = true
+      }
     }
+
+    if (!matchesName && !matchesKeywords) continue
+
+    // Calculer un score de pertinence
+    let score = 0
+    if (matchesName) score += 10
+    if (matchesKeywords) score += 5
+
+    // Bonus si la requête est exactement le début d'un mot-clé
+    if (matchesPrefix) score += 15
+
+    results.push({ ...entry.serialized, score })
   }
 
   // Trier par score de pertinence
@@ -340,7 +375,7 @@ function searchSettings(query) {
  * @param {string} settingId - ID du paramètre
  * @returns {Object|null} Paramètre trouvé ou null
  */
-function getSettingById(settingId) {
+function getSettingById(settingId: string): SettingDefinition | null {
   return SYSTEM_SETTINGS.find(s => s.id === settingId) || null
 }
 
@@ -349,7 +384,7 @@ function getSettingById(settingId) {
  * @param {string} settingId - ID du paramètre
  * @returns {Promise<boolean>} true si activé, false sinon
  */
-async function getSettingState(settingId) {
+async function getSettingState(settingId: string): Promise<boolean> {
   try {
     switch (settingId) {
       case 'wifi':
@@ -373,7 +408,7 @@ async function getSettingState(settingId) {
   }
 }
 
-module.exports = {
+export {
   searchSettings,
   getSettingById,
   getSettingState,
