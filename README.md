@@ -1,7 +1,8 @@
 # Finder - Application Launcher for Linux
 
 <p align="center">
-  <img src="https://img.shields.io/badge/Electron-38.4.0-blue" alt="Electron">
+  <img src="https://img.shields.io/badge/Electron-43.2.0-blue" alt="Electron">
+  <img src="https://img.shields.io/badge/TypeScript-strict-3178c6" alt="TypeScript">
   <img src="https://img.shields.io/badge/Platform-Linux-orange" alt="Platform">
   <img src="https://img.shields.io/badge/License-MIT-green" alt="License">
 </p>
@@ -82,7 +83,7 @@ sudo apt remove finder
 ### Installation pour développeurs
 
 #### Prérequis
-- Node.js (v16 ou supérieur)
+- Node.js (v20 ou supérieur)
 - npm ou yarn
 - Linux (Ubuntu, Debian, Fedora, Arch, etc.)
 
@@ -128,6 +129,9 @@ L'application se configure automatiquement pour démarrer avec votre session Lin
 
 ### Raccourci clavier
 Appuyez sur **`Alt + Space`** pour ouvrir/fermer Finder
+
+En configuration multi-écrans, Finder s'ouvre sur l'écran où se trouve le
+curseur, comme Spotlight sur macOS.
 
 ### Snippets de recherche
 
@@ -218,98 +222,129 @@ script.sh
 
 ## 🏗️ Architecture du projet
 
+Le projet est écrit intégralement en TypeScript. Les sources vivent dans `src/`
+et sont compilées vers `dist/`, d'où Electron les charge.
+
 ```
 finder/
-├── main.js              # Processus principal Electron
-├── renderer.js          # Logique de l'interface utilisateur
-├── preload.js           # Script de sécurité (contextBridge)
-├── index.html           # Interface HTML/CSS
-├── appScanner.js        # Scanner d'applications (.desktop)
-├── fileScanner.js       # Scanner de fichiers (HOME)
-├── iconFinder.js        # Recherche d'icônes système
-├── package.json         # Configuration npm
-└── README.md            # Documentation
+├── src/
+│   ├── main/                   # Processus principal
+│   │   ├── index.ts            # Point d'entrée
+│   │   ├── config.ts           # Constantes et chemins
+│   │   ├── window.ts           # Fenêtre et positionnement multi-écrans
+│   │   ├── lifecycle.ts        # Instance unique, démarrage automatique
+│   │   ├── ipc/                # Handlers IPC (transport uniquement)
+│   │   ├── services/           # Logique métier, sans Electron
+│   │   └── scanners/           # Accès au système
+│   ├── preload/index.ts        # Pont contextBridge
+│   ├── renderer/               # Interface
+│   │   ├── index.html
+│   │   ├── main.ts
+│   │   └── features/conversion/
+│   └── shared/                 # Contrats IPC, types, chemins
+├── tests/unit/                 # 91 tests (Vitest)
+└── scripts/                    # Outillage de build
 ```
 
-### Modules principaux
+### Frontières
 
-#### `main.js`
-- Gère le cycle de vie de l'application
-- Crée la fenêtre sans bordure
-- Enregistre le raccourci global `Alt+Space`
-- Gère la communication IPC avec le renderer
+Le renderer n'a accès à aucune API Node : sa configuration TypeScript ne déclare
+aucun type Node, ce qui rend un `import fs` impossible à compiler. Tous les
+échanges passent par `window.electronAPI`, défini par le preload.
 
-#### `renderer.js`
-- Interface utilisateur et logique de recherche
-- Filtrage et affichage des résultats
-- Gestion de l'historique et de la calculatrice
-- Gestion des événements clavier
-
-#### `appScanner.js`
-- Parse les fichiers `.desktop` des applications
-- Scanne `/usr/share/applications`, Snap, Flatpak
-- Déduplique et trie les applications
-
-#### `fileScanner.js`
-- Indexe récursivement le répertoire HOME
-- Filtre les dossiers système et caches
-- Limite la profondeur à 4 niveaux pour la performance
+Les scanners et les services ne dépendent pas d'Electron : ils sont vérifiables
+sans lancer l'application.
 
 ## ⚙️ Configuration
 
-### Modifier le raccourci clavier
+### Raccourci clavier et dimensions
 
-Dans `main.js`, ligne 25 :
-```javascript
-const GLOBAL_SHORTCUT = 'Alt+Space'  // Changez ici
+Dans `src/main/config.ts` :
+```typescript
+export const GLOBAL_SHORTCUT = 'Alt+Space'
+export const WINDOW_TOP_POSITION = 0.15   // 15 % depuis le haut
 ```
 
-### Ajuster la profondeur de scan des fichiers
+### Profondeur de scan des fichiers
 
-Dans `fileScanner.js`, ligne 76 :
-```javascript
-const MAX_SCAN_DEPTH = 4  // Augmentez pour scanner plus profond
+Dans `src/main/scanners/file-scanner.ts` :
+```typescript
+const MAX_SCAN_DEPTH = 4
 ```
 
-### Limiter l'historique
+### Emplacements système
 
-Dans `renderer.js`, ligne 56 :
-```javascript
-if (searchHistory.length > 5) {  // Changez le nombre ici
-```
+Dans `src/shared/paths.ts` : répertoires `.desktop`, thèmes d'icônes et racines
+autorisées, partagés par tous les scanners.
 
 ## 🎨 Personnalisation
 
-### Thème
-Modifiez les couleurs dans `index.html` :
-- Fond : `rgba(30, 30, 30, 0.95)`
-- Sélection : `#4a9eff`
-- Texte : `#ffffff`
+Les couleurs, espacements et durées d'animation sont regroupés en variables CSS
+au début de `src/renderer/index.html`.
 
-### Position de la fenêtre
-Dans `main.js`, ligne 22 :
-```javascript
-const WINDOW_TOP_POSITION = 0.15  // 15% du haut (0.0 - 1.0)
+## 🧪 Développement
+
+```bash
+npm start        # compile puis lance l'application
+npm test         # 91 tests unitaires
+npm run typecheck  # vérification de types (mode strict)
+npm run verify   # typecheck + tests + build
+npm run make     # paquets .deb et .zip
 ```
-
-## 🐛 Débogage
 
 ### Activer les DevTools
-Ajoutez dans `main.js` après `createWindow()` :
-```javascript
-win.webContents.openDevTools()
+
+Dans `src/main/window.ts`, après la création de la fenêtre :
+```typescript
+win.webContents.openDevTools({ mode: 'detach' })
 ```
 
-### Voir les logs
-Les logs s'affichent dans le terminal où vous avez lancé `npm start`
+## 🔒 Confidentialité des données
 
-## 🐛 Bugs connus
+Finder fonctionne **entièrement en local**. L'application ne comporte ni compte
+utilisateur, ni serveur, ni télémétrie, ni collecteur de plantages, ni service
+d'analyse d'usage. Aucune dépendance tierce de collecte n'est embarquée.
 
-### 🎮 Discord (et autres apps Electron) ne s'ouvre pas
-Certaines applications comme Discord ne se lancent pas depuis Finder. Les fichiers `.desktop` contiennent des paramètres spéciaux qui ne sont pas correctement gérés.
+### Données conservées
 
-### 🖥️ Multi-écrans
-Sur une configuration multi-écrans, Finder s'ouvre toujours sur l'écran principal au lieu de l'écran où se trouve le curseur.
+| Donnée | Emplacement | Durée | Finalité |
+|---|---|---|---|
+| Historique de recherche (5 entrées) | Stockage local du navigateur | Jusqu'à effacement | Proposer les recherches récentes |
+| Index des applications et fichiers | Mémoire vive uniquement | Durée de la session | Répondre aux recherches |
+| Position du curseur | Non conservée | Instantanée | Ouvrir sur le bon écran |
+
+L'index des fichiers ne quitte jamais la mémoire : il n'est écrit sur aucun
+disque et disparaît à la fermeture.
+
+### Seul flux sortant
+
+La recherche web (préfixe `??`, ou absence de résultat local) ouvre votre
+navigateur par défaut sur Google avec la requête saisie. **Elle n'est déclenchée
+que par une action explicite.** L'URL est construite par le processus principal
+à partir de la seule requête, jamais par l'interface.
+
+Aucune autre donnée ne sort de votre poste.
+
+### Effacer vos données
+
+Appuyez sur **`Ctrl + Suppr`** dans la fenêtre de recherche. Après confirmation,
+l'application supprime :
+
+- l'historique de recherche ;
+- les caches du moteur de rendu ;
+- les artefacts créés par Chromium.
+
+Vos fichiers personnels ne sont pas touchés.
+
+À la fermeture, Finder retire par ailleurs les fichiers que Chromium crée sans
+finalité pour cette application, dont un identifiant persistant du poste
+(`Crashpad/client_id`).
+
+### Journaux
+
+Les messages affichés dans la console ne contiennent ni chemin de fichier, ni
+requête, ni contenu de document. Ils ne sont écrits dans aucun fichier et ne
+sont transmis nulle part.
 
 ## 🤝 Contribution
 
@@ -332,7 +367,7 @@ Ce projet est sous licence MIT. Voir le fichier `LICENSE` pour plus de détails.
 
 ## 🙏 Remerciements
 
-- Inspiré par Spotlight (macOS) et Albert (Linux)
+- Inspiré par Spotlight (macOS)
 - Construit avec [Electron](https://www.electronjs.org/)
 - Icônes générées avec SVG
 
