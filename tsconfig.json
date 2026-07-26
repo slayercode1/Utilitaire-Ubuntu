@@ -1,0 +1,42 @@
+{
+  "compilerOptions": {
+    /* Electron 43 embarque Node 22 : ES2022 est intégralement supporté. */
+    "target": "ES2022",
+    "lib": ["ES2023", "DOM", "DOM.Iterable"],
+
+    /* Le projet reste en CommonJS : Forge charge le point d'entrée
+       directement, sans bundler, et le renderer est inclus par <script src>
+       sans type="module". Passer à ESM demanderait de remplacer __dirname et
+       de revoir ce chargement — migration distincte, à ne pas cumuler. */
+    "module": "Node16",
+    "moduleResolution": "node16",
+
+    /* tsc est ici un vrai compilateur : les sources vivent dans src/ et sont
+       émises à la racine de dist/, d'où Electron les charge. */
+    "rootDir": "src",
+    "outDir": "dist",
+    "sourceMap": true,
+
+    /* Plus aucun JavaScript dans src/ : la coexistence est terminée. */
+    "allowJs": false,
+
+    "strict": true,
+    "noUncheckedIndexedAccess": true,
+    "exactOptionalPropertyTypes": true,
+    "useUnknownInCatchVariables": true,
+    "noImplicitOverride": true,
+    "noFallthroughCasesInSwitch": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "noImplicitReturns": true,
+
+    "esModuleInterop": true,
+    "resolveJsonModule": true,
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true,
+
+    "types": ["node"]
+  },
+  "include": ["src/**/*.ts"],
+  "exclude": ["node_modules", "out", "dist", "tests", "src/renderer"]
+}

@@ -1,0 +1,17 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    /* Le renderer s'exécute dans une page, sans Node : il est chargé par
+       <script type="module">, ce qui impose une sortie en modules ES. Le
+       processus principal, lui, reste en CommonJS. */
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+
+    /* Aucune API Node n'est accessible depuis le renderer : le retirer des
+       types garantit qu'aucun appel ne s'y glisse. */
+    "types": [],
+    "lib": ["ES2023", "DOM", "DOM.Iterable"]
+  },
+  "include": ["src/renderer/**/*.ts", "src/shared/types.ts"],
+  "exclude": ["node_modules", "out", "dist"]
+}

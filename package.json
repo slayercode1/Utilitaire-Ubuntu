@@ -3,31 +3,44 @@
   "version": "1.0.0",
   "description": "Application de recherche type Spotlight pour Linux",
   "author": "Finder Team",
-  "main": "main.js",
+  "main": "dist/main/index.js",
   "bin": {
-    "finder": "main.js"
+    "finder": "dist/main/index.js"
   },
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
-    "start": "electron-forge start",
-    "package": "electron-forge package",
-    "make": "electron-forge make"
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "typecheck": "tsc --noEmit && tsc --noEmit -p tsconfig.renderer.json && tsc --noEmit -p tsconfig.tests.json",
+    "verify": "npm run typecheck && npm run test && npm run build",
+    "start": "npm run build && electron-forge start",
+    "package": "npm run build && electron-forge package",
+    "make": "npm run build && electron-forge make",
+    "build": "tsc && tsc -p tsconfig.renderer.json && tsc -p tsconfig.scripts.json && node dist-scripts/copy-assets.js"
   },
-  "keywords": ["launcher", "spotlight", "search", "linux", "productivity"],
+  "keywords": [
+    "launcher",
+    "spotlight",
+    "search",
+    "linux",
+    "productivity"
+  ],
   "license": "MIT",
   "devDependencies": {
-    "@electron-forge/cli": "^7.10.2",
-    "@electron-forge/maker-deb": "^7.10.2",
-    "@electron-forge/maker-rpm": "^7.10.2",
-    "@electron-forge/maker-squirrel": "^7.10.2",
-    "@electron-forge/maker-zip": "^7.10.2",
-    "@electron-forge/plugin-auto-unpack-natives": "^7.10.2",
-    "@electron-forge/plugin-fuses": "^7.10.2",
+    "@electron-forge/cli": "^7.11.2",
+    "@electron-forge/maker-deb": "^7.11.2",
+    "@electron-forge/maker-zip": "^7.11.2",
+    "@electron-forge/plugin-fuses": "^7.11.2",
     "@electron/fuses": "^1.8.0",
-    "electron": "^38.4.0"
+    "@types/node": "^26.1.1",
+    "electron": "^43.2.0",
+    "typescript": "^7.0.2",
+    "vitest": "^3.2.7"
   },
-  "dependencies": {
-    "auto-launch": "^5.0.6",
-    "electron-squirrel-startup": "^1.0.1"
+  "dependencies": {},
+  "overrides": {
+    "brace-expansion@^1": "^1.1.12",
+    "brace-expansion@^2": "^2.1.2",
+    "tmp": "^0.2.7",
+    "tar": "^7.5.22"
   }
 }

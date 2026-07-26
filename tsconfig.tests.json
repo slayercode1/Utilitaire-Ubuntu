@@ -1,0 +1,18 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    /* Vitest charge les tests comme des modules ES, contrairement au code du
+       processus principal qui reste en CommonJS. */
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+
+    /* Vérification seule : les tests ne sont jamais émis, donc rootDir et
+       outDir de la configuration applicative ne s'appliquent pas. */
+    "noEmit": true,
+    "rootDir": ".",
+
+    "types": ["node"]
+  },
+  "include": ["tests/**/*.ts", "src/**/*.ts"],
+  "exclude": ["node_modules", "out", "dist", "dist-scripts"]
+}
