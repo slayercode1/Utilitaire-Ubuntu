@@ -4,7 +4,7 @@
   <img src="https://img.shields.io/badge/Electron-43.2.0-blue" alt="Electron">
   <img src="https://img.shields.io/badge/TypeScript-strict-3178c6" alt="TypeScript">
   <img src="https://img.shields.io/badge/Platform-Linux-orange" alt="Platform">
-  <img src="https://img.shields.io/badge/License-MIT-green" alt="License">
+  <img src="https://img.shields.io/badge/License-Source--Available-orange" alt="License">
 </p>
 
 Une application de recherche type **Spotlight** pour Linux, construite avec Electron. Finder permet de rechercher et lancer rapidement des applications, fichiers, et effectuer des calculs, le tout avec un simple raccourci clavier.
@@ -52,6 +52,8 @@ Une application de recherche type **Spotlight** pour Linux, construite avec Elec
 
 ### ⚡ Autres fonctionnalités
 - **Auto-démarrage** : Se lance automatiquement au démarrage de la session
+- **Mises à jour automatiques** : Télécharge chaque release publiée depuis `main`
+  et propose un redémarrage dès qu'elle est prête
 - Interface moderne et fluide
 - Masquage automatique de la fenêtre (blur)
 - Compteur d'éléments indexés
@@ -64,14 +66,46 @@ Une application de recherche type **Spotlight** pour Linux, construite avec Elec
 
 1. **Télécharger le fichier `.deb`** depuis les [releases](https://github.com/slayercode1/Utilitaire-Ubuntu/releases)
 
+   Vérifiez ensuite le checksum et sa signature Sigstore :
+
+```bash
+sha256sum --check SHA256SUMS
+cosign verify-blob \
+  --bundle SHA256SUMS.sigstore.json \
+  --certificate-identity 'https://github.com/slayercode1/Utilitaire-Ubuntu/.github/workflows/release.yml@refs/heads/main' \
+  --certificate-oidc-issuer https://token.actions.githubusercontent.com \
+  SHA256SUMS
+gh attestation verify Finder-*-amd64.deb --repo slayercode1/Utilitaire-Ubuntu
+```
+
 2. **Installer le package** :
 ```bash
-sudo dpkg -i finder_1.0.0_amd64.deb
+sudo apt install ./Finder-*-amd64.deb
 ```
 
 3. **C'est tout !** 🎉
    - L'application se lance automatiquement en arrière-plan
    - Appuyez sur **`Alt + Space`** pour l'utiliser
+   - Finder vérifie les mises à jour au démarrage puis toutes les quatre heures
+
+   Le paquet configure lui-même le sandbox Chromium (`chrome-sandbox` en
+   root:4755 via le script post-installation) : **aucune manipulation n'est
+   demandée aux utilisateurs**, y compris sur Ubuntu 24.04+ où le noyau
+   restreint les user namespaces non privilégiés.
+
+   > **Dépannage** — si une installation datant d'une version antérieure
+   > affiche « The SUID sandbox helper binary was found, but is not
+   > configured correctly », réinstallez le paquet ou exécutez :
+   > `sudo chmod 4755 /opt/Finder/chrome-sandbox`
+
+Les paquets AppImage et Debian téléchargent automatiquement la dernière release
+GitHub, vérifient son empreinte SHA-512 et demandent avant de redémarrer. Une
+installation Snap doit être mise à jour par le Snap Store.
+
+> **AppImage sur Ubuntu 24.04+** : un AppImage ne peut pas embarquer de
+> binaire setuid ; si le lancement échoue sur l'erreur de sandbox, préférez
+> le `.deb`, ou autorisez les user namespaces pour ce binaire via un profil
+> AppArmor (même principe que `scripts/setup-dev-sandbox.sh`).
 
 **Désinstallation :**
 ```bash
@@ -83,7 +117,7 @@ sudo apt remove finder
 ### Installation pour développeurs
 
 #### Prérequis
-- Node.js (v20 ou supérieur)
+- Node.js 22.12 ou supérieur
 - npm ou yarn
 - Linux (Ubuntu, Debian, Fedora, Arch, etc.)
 
@@ -99,8 +133,25 @@ cd Utilitaire-Ubuntu
 ```bash
 npm install
 ```
+   Ce `npm install` installe aussi les hooks git (husky) : formatage et lint
+   Biome au commit, message au format Conventional Commits, typecheck + tests
+   avant chaque push.
 
-3. **Lancer en mode développement**
+3. **Autoriser le sandbox Chromium** *(une fois par machine, Ubuntu 24.04+)*
+```bash
+sudo scripts/setup-dev-sandbox.sh
+```
+   Ubuntu restreint les user namespaces non privilégiés : sans ce réglage,
+   `npm start` s'arrête sur « The SUID sandbox helper binary was found, but
+   is not configured correctly ». Le script installe un profil AppArmor qui
+   autorise les user namespaces **pour le seul binaire Electron de ce
+   dépôt** — pas de `chmod 4755` sur un fichier de `node_modules` (un
+   binaire setuid-root réécrit à chaque `npm install` serait une élévation
+   de privilèges offerte à toute compromission de la chaîne npm), et le
+   profil survit aux réinstallations. Les utilisateurs finaux ne sont pas
+   concernés : le `.deb` règle son propre sandbox à l'installation.
+
+4. **Lancer en mode développement**
 ```bash
 npm start
 ```
@@ -110,10 +161,10 @@ npm start
 Pour créer un package distribuable :
 
 ```bash
-# Créer un .deb (Debian/Ubuntu)
-npm run make
+# Créer l'AppImage, le .deb et les métadonnées d'auto-update
+npm run release:linux
 
-# Les fichiers seront dans ./out/make/deb/x64/
+# Les fichiers seront dans ./out/builder/
 ```
 
 **Le package .deb inclut :**
@@ -123,7 +174,9 @@ npm run make
 - ✅ Toutes les dépendances
 
 **Note sur l'auto-démarrage :**
-L'application se configure automatiquement pour démarrer avec votre session Linux. Elle utilise le package `auto-launch` qui crée une entrée dans `~/.config/autostart/`. Aucune configuration manuelle n'est nécessaire.
+L'application se configure automatiquement pour démarrer avec votre session
+Linux en créant elle-même une entrée atomique et privée dans
+`~/.config/autostart/`. Aucune configuration manuelle n'est nécessaire.
 
 ## 🎮 Utilisation
 
@@ -225,6 +278,10 @@ script.sh
 Le projet est écrit intégralement en TypeScript. Les sources vivent dans `src/`
 et sont compilées vers `dist/`, d'où Electron les charge.
 
+Le compilateur utilise le mode `strict` et ses contrôles complémentaires. Le
+build exécute aussi `scripts/check-strict-types.ts`, qui refuse les types
+échappatoires explicites et les paramètres de capture non typables proprement.
+
 ```
 finder/
 ├── src/
@@ -242,7 +299,7 @@ finder/
 │   │   ├── main.ts
 │   │   └── features/conversion/
 │   └── shared/                 # Contrats IPC, types, chemins
-├── tests/unit/                 # 91 tests (Vitest)
+├── tests/unit/                 # Tests unitaires Vitest
 └── scripts/                    # Outillage de build
 ```
 
@@ -251,6 +308,10 @@ finder/
 Le renderer n'a accès à aucune API Node : sa configuration TypeScript ne déclare
 aucun type Node, ce qui rend un `import fs` impossible à compiler. Tous les
 échanges passent par `window.electronAPI`, défini par le preload.
+
+Le document principal utilise l'origine interne sécurisée
+`finder-app://renderer`. Le handler ne sert que les fichiers compilés attendus ;
+les images locales doivent appartenir à un index détenu par le processus main.
 
 Les scanners et les services ne dépendent pas d'Electron : ils sont vérifiables
 sans lancer l'application.
@@ -280,17 +341,29 @@ autorisées, partagés par tous les scanners.
 ## 🎨 Personnalisation
 
 Les couleurs, espacements et durées d'animation sont regroupés en variables CSS
-au début de `src/renderer/index.html`.
+au début de `src/renderer/styles.css`.
 
 ## 🧪 Développement
 
 ```bash
-npm start        # compile puis lance l'application
-npm test         # 91 tests unitaires
-npm run typecheck  # vérification de types (mode strict)
-npm run verify   # typecheck + tests + build
-npm run make     # paquets .deb et .zip
+npm start               # compile puis lance l'application
+npm test                # tests unitaires (Vitest)
+npm run test:e2e        # tests E2E Playwright (vraie application Electron)
+npm run test:regression # parcours critique + comparaisons visuelles
+npm run test:all        # unitaires + couverture + E2E + régression
+npm run lint            # Biome (format + lint) ; lint:fix pour corriger
+npm run typecheck       # vérification de types (mode strict)
+npm run verify          # typecheck + tests + build
+npm run make            # paquets .deb et .zip
 ```
+
+La qualité est verrouillée par les hooks git (installés par `npm install`) :
+
+| Hook         | Vérification                                              |
+| ------------ | --------------------------------------------------------- |
+| `pre-commit` | Biome sur les fichiers indexés (lint-staged)               |
+| `commit-msg` | Message au format Conventional Commits (commitlint)        |
+| `pre-push`   | `typecheck` + tests unitaires                              |
 
 ### Activer les DevTools
 
@@ -336,8 +409,9 @@ l'application supprime :
 
 Vos fichiers personnels ne sont pas touchés.
 
-À la fermeture, Finder retire par ailleurs les fichiers que Chromium crée sans
-finalité pour cette application, dont un identifiant persistant du poste
+Au démarrage, Finder retire par ailleurs les fichiers laissés par la session
+précédente que Chromium crée sans finalité pour cette application, dont un
+identifiant persistant du poste
 (`Crashpad/client_id`).
 
 ### Journaux
@@ -348,22 +422,25 @@ sont transmis nulle part.
 
 ## 🤝 Contribution
 
-Les contributions sont les bienvenues ! Voici comment contribuer :
+Les contributions sont les bienvenues ! Le guide complet (mise en route,
+hooks, style, tests, sécurité) est dans [CONTRIBUTING.md](CONTRIBUTING.md).
+En résumé :
 
 1. Fork le projet
-2. Créez votre branche (`git checkout -b feature/AmazingFeature`)
-3. Committez vos changements (`git commit -m 'Add some AmazingFeature'`)
-4. Push vers la branche (`git push origin feature/AmazingFeature`)
+2. Créez votre branche (`git checkout -b feat/ma-fonctionnalite`)
+3. Committez au format Conventional Commits (`git commit -m 'feat: ajoute ma fonctionnalité'`) — vérifié par le hook `commit-msg`
+4. Push vers la branche (`git push origin feat/ma-fonctionnalite`) — typecheck + tests exécutés par le hook `pre-push`
 5. Ouvrez une Pull Request
 
 ### Guidelines
-- Code bien commenté et documenté
-- Suivre les conventions de nommage existantes
-- Tester sur différentes distributions Linux
+- Style appliqué automatiquement par Biome (`npm run lint:fix`)
+- Commentaires expliquant le *pourquoi*, en français
+- Tout nouveau service arrive avec ses tests unitaires
+- Tester sur différentes distributions Linux quand c'est possible
 
 ## 📝 Licence
 
-Ce projet est sous licence MIT. Voir le fichier `LICENSE` pour plus de détails.
+Code **source disponible** : consultation, usage personnel et contributions bienvenus ; redistribution et usage commercial soumis à autorisation. Voir [LICENSE](LICENSE) et [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ## 🙏 Remerciements
 
@@ -376,6 +453,7 @@ Ce projet est sous licence MIT. Voir le fichier `LICENSE` pour plus de détails.
 Pour toute question ou suggestion :
 - Ouvrir une issue sur GitHub
 - Contribuer via Pull Request
+- Pour une vulnérabilité, suivre la procédure privée de [SECURITY.md](SECURITY.md)
 
 ---
 

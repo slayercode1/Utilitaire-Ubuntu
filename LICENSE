@@ -1,0 +1,61 @@
+Licence Source Disponible de Finder — version 1.0
+Finder Source-Available License — version 1.0
+
+Copyright (c) 2026 Yann Clain. Tous droits réservés.
+
+Le code source de ce projet est publié afin d'être consulté, audité et
+amélioré par la communauté. Il ne s'agit pas d'une licence open source au
+sens de l'Open Source Initiative : les droits accordés sont limités et le
+titulaire conserve l'ensemble des droits non expressément concédés.
+
+1. DROITS ACCORDÉS
+
+Sous réserve du respect de la présente licence, il est permis, gratuitement :
+
+  a. de consulter, cloner et compiler le code source ;
+  b. d'exécuter le logiciel pour un usage personnel et non commercial,
+     ainsi qu'à des fins d'évaluation, d'audit de sécurité, d'enseignement
+     ou de recherche ;
+  c. de modifier le code source localement afin de tester des améliorations ;
+  d. de soumettre des contributions au dépôt d'origine
+     (https://github.com/slayercode1/Utilitaire-Ubuntu).
+
+2. RESTRICTIONS
+
+Sauf autorisation écrite préalable du titulaire, il est interdit :
+
+  a. de redistribuer le logiciel, en source ou sous forme compilée, en tout
+     ou partie, y compris sous forme de fork public destiné à un usage autre
+     que la soumission de contributions au dépôt d'origine ;
+  b. d'exploiter le logiciel ou une œuvre dérivée à des fins commerciales,
+     directement ou indirectement ;
+  c. de publier ou distribuer une œuvre dérivée sous quelque nom que ce soit ;
+  d. de retirer ou d'altérer les mentions de droits d'auteur.
+
+3. CONTRIBUTIONS
+
+En soumettant une contribution (code, documentation, ressource) au dépôt
+d'origine, le contributeur :
+
+  a. certifie disposer des droits nécessaires sur sa contribution ;
+  b. accorde au titulaire une licence mondiale, gratuite, irrévocable et
+     transférable d'utiliser, modifier, distribuer et concéder en
+     sous-licence cette contribution, y compris sous d'autres termes de
+     licence à l'avenir ;
+  c. conserve les droits d'auteur sur sa contribution.
+
+4. ABSENCE DE GARANTIE
+
+LE LOGICIEL EST FOURNI « EN L'ÉTAT », SANS GARANTIE D'AUCUNE SORTE, EXPRESSE
+OU IMPLICITE, Y COMPRIS LES GARANTIES DE QUALITÉ MARCHANDE, D'ADÉQUATION À
+UN USAGE PARTICULIER ET D'ABSENCE DE CONTREFAÇON. EN AUCUN CAS LE TITULAIRE
+NE POURRA ÊTRE TENU RESPONSABLE D'UN DOMMAGE QUELCONQUE RÉSULTANT DE
+L'UTILISATION DU LOGICIEL.
+
+5. RÉSILIATION
+
+Tout manquement à la présente licence met fin immédiatement et de plein
+droit aux droits accordés. Les sections 3 et 4 survivent à la résiliation.
+
+Pour toute demande d'autorisation (redistribution, usage commercial,
+distribution en entreprise) : compte.professionel@outlook.com
