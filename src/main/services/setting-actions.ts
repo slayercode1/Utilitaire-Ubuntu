@@ -9,13 +9,15 @@
  * repli sans démarrer de processus.
  */
 
+import type { RuntimeValue } from '../../shared/types.js'
+
 /** Action attachée à un paramètre système. */
 export interface SettingActionDefinition {
   id: string
   name?: string
   icon?: string
   /** Fonction à exécuter, ou commande shell principale. */
-  command?: (() => Promise<unknown>) | string
+  command?: (() => Promise<RuntimeValue>) | string
   /** Repli pour un autre environnement de bureau. */
   commandAlt?: string
   /** Second repli. */
@@ -43,8 +45,8 @@ export type SettingActionFailure =
 
 /** Issue d'une exécution d'action. */
 export type SettingActionOutcome =
-  | { ok: true; result?: unknown }
-  | { ok: false; reason: SettingActionFailure; result?: unknown }
+  | { ok: true; result?: RuntimeValue }
+  | { ok: false; reason: SettingActionFailure; result?: string }
 
 /**
  * Sélectionne l'action demandée dans un paramètre.
@@ -61,9 +63,7 @@ export function findAction(
 /**
  * Liste les commandes à tenter, de la principale aux replis.
  */
-export function collectCommandCandidates(
-  action: SettingActionDefinition
-): string[] {
+export function collectCommandCandidates(action: SettingActionDefinition): string[] {
   return [action.command, action.commandAlt, action.commandAlt2]
     .filter(
       (candidate): candidate is string =>
@@ -96,11 +96,11 @@ export async function executeSettingAction(
     try {
       const result = await action.command()
       return { ok: true, result }
-    } catch (error: unknown) {
+    } catch {
       return {
         ok: false,
         reason: 'action-failed',
-        result: error instanceof Error ? error.message : String(error)
+        result: 'Action programmée impossible'
       }
     }
   }

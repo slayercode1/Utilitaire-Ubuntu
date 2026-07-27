@@ -10,9 +10,9 @@
  * (article 25.2).
  */
 
-import { app } from 'electron'
 import fs from 'node:fs'
 import path from 'node:path'
+import { app } from 'electron'
 
 /**
  * Artefacts créés par Chromium sans finalité pour cette application.
@@ -42,8 +42,10 @@ const ARTEFACTS_INUTILES: readonly string[] = [
 /**
  * Supprime les artefacts sans finalité du répertoire de données utilisateur.
  *
- * Appelé à la fermeture : les supprimer au démarrage serait sans effet, puisque
- * Chromium les recrée pendant l'exécution.
+ * Appelé au démarrage, avant l'initialisation de Chromium : il retire ceux de
+ * la session précédente, alors qu'aucun descripteur n'est ouvert. Les faire
+ * disparaître à la fermeture reviendrait à les retirer pendant que le moteur
+ * s'arrête, ce qui rompt son propre arrêt.
  *
  * @returns Nombre d'artefacts effectivement retirés
  */

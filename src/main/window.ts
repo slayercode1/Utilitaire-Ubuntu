@@ -6,13 +6,13 @@
  * masquée plutôt que détruite, ce qui rend l'ouverture instantanée.
  */
 
-import { app, BrowserWindow, screen } from 'electron'
 import type { BrowserWindowConstructorOptions, Display } from 'electron'
-import { pathToFileURL } from 'node:url'
+import { app, BrowserWindow, screen } from 'electron'
+
+import { APP_RENDERER_URL } from '../shared/app-protocol.js'
 
 import {
   APP_ICON_PATH,
-  INDEX_HTML_PATH,
   PRELOAD_PATH,
   WINDOW_HEIGHT,
   WINDOW_TOP_POSITION,
@@ -47,12 +47,7 @@ export async function getDisplayUnderCursor(): Promise<Display> {
 
   const containing = screen.getAllDisplays().find((display) => {
     const { x, y, width, height } = display.bounds
-    return (
-      cursor.x >= x &&
-      cursor.x < x + width &&
-      cursor.y >= y &&
-      cursor.y < y + height
-    )
+    return cursor.x >= x && cursor.x < x + width && cursor.y >= y && cursor.y < y + height
   })
 
   return containing ?? screen.getDisplayNearestPoint(cursor)
@@ -67,9 +62,7 @@ export async function getDisplayUnderCursor(): Promise<Display> {
  */
 export async function positionWindow(window: BrowserWindow): Promise<void> {
   try {
-    const { x: screenX, y: screenY, width, height } = (
-      await getDisplayUnderCursor()
-    ).workArea
+    const { x: screenX, y: screenY, width, height } = (await getDisplayUnderCursor()).workArea
 
     // Sur un écran plus étroit que la fenêtre, le centrage donnerait un
     // décalage négatif qui la ferait déborder sur l'écran voisin.
@@ -80,9 +73,8 @@ export async function positionWindow(window: BrowserWindow): Promise<void> {
     )
 
     window.setPosition(screenX + offsetX, screenY + offsetY)
-  } catch (error: unknown) {
-    const message = error instanceof Error ? error.message : String(error)
-    console.error('Erreur lors du positionnement de la fenêtre:', message)
+  } catch {
+    console.error('Erreur lors du positionnement de la fenêtre')
     window.center()
   }
 }
@@ -126,15 +118,13 @@ export function createWindow(): BrowserWindow {
   win = new BrowserWindow(options)
   win.setSkipTaskbar(true)
 
-  const trustedUrl = pathToFileURL(INDEX_HTML_PATH).href
-
   // Aucune navigation n'est fonctionnelle dans Finder. Les liens externes
   // passent par un canal IPC qui construit lui-même une URL HTTPS allowlistée.
   win.webContents.on('will-navigate', (event, targetUrl) => {
-    if (targetUrl !== trustedUrl) event.preventDefault()
+    if (targetUrl !== APP_RENDERER_URL) event.preventDefault()
   })
   win.webContents.on('will-redirect', (event, targetUrl) => {
-    if (targetUrl !== trustedUrl) event.preventDefault()
+    if (targetUrl !== APP_RENDERER_URL) event.preventDefault()
   })
   win.webContents.setWindowOpenHandler(() => ({ action: 'deny' }))
   win.webContents.on('will-attach-webview', (event) => event.preventDefault())
@@ -142,8 +132,8 @@ export function createWindow(): BrowserWindow {
   // L'application locale n'utilise caméra, micro, géolocalisation, MIDI,
   // notifications ni presse-papiers privilégiés.
   win.webContents.session.setPermissionCheckHandler(() => false)
-  win.webContents.session.setPermissionRequestHandler(
-    (_webContents, _permission, callback) => callback(false)
+  win.webContents.session.setPermissionRequestHandler((_webContents, _permission, callback) =>
+    callback(false)
   )
 
   if (process.platform === 'linux') {
@@ -152,7 +142,7 @@ export function createWindow(): BrowserWindow {
     })
   }
 
-  void win.loadFile(INDEX_HTML_PATH)
+  void win.loadURL(APP_RENDERER_URL)
 
   // La fenêtre est masquée : sa position sera recalculée à la première
   // ouverture, inutile d'attendre ici.

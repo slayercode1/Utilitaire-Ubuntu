@@ -15,10 +15,7 @@ import { spawn } from 'node:child_process'
  * @param description - Libellé utilisé dans les journaux
  * @returns `true` si le processus a démarré
  */
-export function launchDetachedProcess(
-  args: readonly string[],
-  description: string
-): boolean {
+export function launchDetachedProcess(args: readonly string[], description: string): boolean {
   const [command, ...commandArgs] = args
 
   if (!command) {
@@ -39,9 +36,8 @@ export function launchDetachedProcess(
 
     console.log(`${description} launched successfully`)
     return true
-  } catch (error: unknown) {
-    const message = error instanceof Error ? error.message : String(error)
-    console.error(`Error launching ${description}:`, message)
+  } catch {
+    console.error(`Error launching ${description}`)
     return false
   }
 }

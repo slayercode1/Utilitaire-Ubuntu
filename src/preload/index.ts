@@ -34,8 +34,7 @@ const electronApi: ElectronApi = {
   refreshIndex: () => ipcRenderer.invoke('refresh-index'),
 
   /** Lance l'application identifiée par une entrée `.desktop` indexée. */
-  launchApp: (desktopFilePath: string) =>
-    ipcRenderer.send('launch-app', desktopFilePath),
+  launchApp: (desktopFilePath: string) => ipcRenderer.send('launch-app', desktopFilePath),
 
   /** Ouvre un fichier avec l'application par défaut. */
   openFile: (filePath: string) => ipcRenderer.send('open-file', filePath),
@@ -56,8 +55,7 @@ const electronApi: ElectronApi = {
   eraseLocalData: () => ipcRenderer.invoke('erase-local-data'),
 
   /** Indique si un paramètre est actuellement actif. */
-  getSettingState: (settingId: string) =>
-    ipcRenderer.invoke('get-setting-state', settingId),
+  getSettingState: (settingId: string) => ipcRenderer.invoke('get-setting-state', settingId),
 
   /** Déclenche une action rapide d'un paramètre système. */
   executeSettingAction: (settingId: string, actionId: string) =>

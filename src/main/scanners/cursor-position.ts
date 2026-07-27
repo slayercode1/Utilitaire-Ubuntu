@@ -16,8 +16,8 @@
  * macOS, Windows), on retombe sur l'API d'Electron.
  */
 
-import { execFileSync, spawn } from 'node:child_process'
 import type { ChildProcessByStdio } from 'node:child_process'
+import { execFileSync, spawn } from 'node:child_process'
 import type { Readable, Writable } from 'node:stream'
 
 /** Coordonnées écran, en pixels. */
@@ -48,11 +48,15 @@ const DETECTION_TIMEOUT = 2000
  */
 const RESPONSE_TIMEOUT = 60
 
-/** Indique si l'interrogation directe de X11 est envisageable. */
-const isX11 =
-  process.platform === 'linux' &&
-  process.env['XDG_SESSION_TYPE'] !== 'wayland' &&
-  Boolean(process.env['DISPLAY'])
+/**
+ * Indique si l'interrogation directe de X11 est envisageable.
+ *
+ * `XDG_SESSION_TYPE` décrit la session, pas le backend effectif : sous
+ * XWayland elle vaut `wayland` alors que le serveur X répond. Seule la présence
+ * de `DISPLAY` est déterminante, et l'échec de la détection initiale suffit à
+ * écarter les sessions Wayland pures.
+ */
+const isX11 = process.platform === 'linux' && Boolean(process.env['DISPLAY'])
 
 /**
  * Boucle Python : ouvre la connexion X une fois, puis répond à chaque ligne
@@ -197,12 +201,7 @@ export function stopCursorDaemon(): void {
 function parseResponse(raw: string): CursorPoint | null {
   const [x, y] = raw.trim().split(/\s+/).map(Number)
 
-  if (
-    typeof x === 'number' &&
-    typeof y === 'number' &&
-    Number.isFinite(x) &&
-    Number.isFinite(y)
-  ) {
+  if (typeof x === 'number' && typeof y === 'number' && Number.isFinite(x) && Number.isFinite(y)) {
     return { x, y }
   }
 
@@ -276,9 +275,7 @@ function queryXdotool(): CursorPoint | null {
  *
  * @param screen - Module `screen` d'Electron, utilisé en repli
  */
-export async function getCursorPosition(
-  screen: CursorPointSource
-): Promise<CursorPoint> {
+export async function getCursorPosition(screen: CursorPointSource): Promise<CursorPoint> {
   const mode = detectStrategy()
 
   if (mode === 'python') {

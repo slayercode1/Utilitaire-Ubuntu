@@ -1,13 +1,8 @@
 /**
  * Finder - Application Scanner
  *
- * Ce module scanne les applications installées sur le système Linux
- * en lisant les fichiers .desktop dans les emplacements standard.
- *
- * STANDARDS LINUX :
- * - Les applications sont décrites dans des fichiers .desktop
- * - Ces fichiers suivent la spécification freedesktop.org
- * - Ils contiennent le nom, la description, l'icône et la commande de l'app
+ * Scanne les applications installées en lisant les fichiers .desktop
+ * (spécification freedesktop.org) dans les emplacements standard.
  *
  * PERFORMANCE :
  * - Le parsing s'arrête dès la fin de la section [Desktop Entry]
@@ -17,11 +12,9 @@
 
 import fs from 'node:fs'
 import path from 'node:path'
-import { findIcon } from './icon-finder.js'
 import { DESKTOP_DIRS } from '../../shared/paths.js'
 import type { AppEntry } from '../../shared/types.js'
-
-// === CONFIGURATION ===
+import { findIcon } from './icon-finder.js'
 
 /**
  * Langue de l'utilisateur, pour retenir les libellés localisés (Name[fr]).
@@ -35,21 +28,11 @@ const USER_LANGUAGE: string = (
   .split('.')[0]! // fr_FR.UTF-8 -> fr_FR
   .split('@')[0]!
 
-/**
- * Variante courte de la langue : fr_FR -> fr
- */
+/** Variante courte de la langue : fr_FR -> fr */
 const USER_LANGUAGE_SHORT: string = USER_LANGUAGE.split('_')[0]!
 
-// === FONCTIONS DE PARSING ===
-
-/**
- * Extrait la clé et la localisation d'une ligne de fichier .desktop
- * @param {string} line - Ligne à analyser (déjà nettoyée)
- * @returns {{key: string, locale: string, value: string}|null}
- */
-function parseEntryLine(
-  line: string
-): { key: string; locale: string; value: string } | null {
+/** Extrait la clé, la localisation et la valeur d'une ligne de fichier .desktop. */
+function parseEntryLine(line: string): { key: string; locale: string; value: string } | null {
   const separator = line.indexOf('=')
   if (separator === -1) return null
 
@@ -66,13 +49,10 @@ function parseEntryLine(
 }
 
 /**
- * Détermine si une valeur localisée doit remplacer celle déjà retenue.
+ * Priorité d'une valeur localisée (0 = à ignorer).
  *
  * Une correspondance exacte (fr_FR) prime sur une correspondance de langue
  * (fr), qui prime elle-même sur la valeur non localisée.
- *
- * @param {string} locale - Locale de la ligne courante
- * @returns {number} Score de priorité (0 = à ignorer)
  */
 function localeScore(locale: string): number {
   if (!locale) return 1
@@ -81,16 +61,12 @@ function localeScore(locale: string): number {
   return 0
 }
 
-/**
- * Parse un fichier .desktop et extrait les métadonnées de l'application
- * @param {string} filePath - Chemin vers le fichier .desktop
- * @returns {Object|null} Objet application ou null si parsing échoue
- */
+/** Parse un fichier .desktop et extrait les métadonnées de l'application. */
 function parseDesktopFile(filePath: string): AppEntry | null {
   let content: string
   try {
     content = fs.readFileSync(filePath, 'utf8')
-  } catch (error) {
+  } catch {
     return null
   }
 
@@ -147,8 +123,10 @@ function parseDesktopFile(filePath: string): AppEntry | null {
       case 'Comment':
       case 'GenericName':
         // Comment est plus informatif que GenericName : à score égal, il gagne
-        if (score > scores.description ||
-            (score === scores.description && entry.key === 'Comment' && !app.description)) {
+        if (
+          score > scores.description ||
+          (score === scores.description && entry.key === 'Comment' && !app.description)
+        ) {
           app.description = entry.value
           scores.description = score
         }
@@ -177,13 +155,8 @@ function parseDesktopFile(filePath: string): AppEntry | null {
   return app
 }
 
-/**
- * Vérifie si une application est valide et devrait être affichée
- * @param {Object} app - Objet application
- * @returns {boolean} true si l'application est valide
- */
 function isValidApp(app: AppEntry | null): app is AppEntry {
-  return Boolean(app && app.name && app.exec && !app.hidden)
+  return Boolean(app?.name && app.exec && !app.hidden)
 }
 
 /**
@@ -191,15 +164,12 @@ function isValidApp(app: AppEntry | null): app is AppEntry {
  *
  * Les snaps ne sont pas cherchés sous ~/snap : snapd exporte leurs entrées
  * dans /var/lib/snapd/desktop/applications, déjà présent dans DESKTOP_DIRS.
- *
- * @param {string} dir - Répertoire à lister
- * @returns {string[]} Chemins complets des fichiers .desktop
  */
 function listDesktopFiles(dir: string): string[] {
   let entries: fs.Dirent[]
   try {
     entries = fs.readdirSync(dir, { withFileTypes: true })
-  } catch (error) {
+  } catch {
     // Répertoire absent ou illisible : cas normal selon l'installation
     return []
   }
@@ -215,13 +185,8 @@ function listDesktopFiles(dir: string): string[] {
   return files
 }
 
-// === FONCTION PRINCIPALE ===
-
-/**
- * Scanne tous les répertoires d'applications et retourne la liste unique des apps
- * @returns {object[]} Applications triées et dédupliquées
- */
-function scanApplications(): AppEntry[] {
+/** Scanne tous les répertoires d'applications ; résultat trié et dédupliqué. */
+export function scanApplications(): AppEntry[] {
   console.log('🔍 Scanning for installed applications...')
 
   const startedAt = Date.now()
@@ -258,13 +223,9 @@ function scanApplications(): AppEntry[] {
   }
 
   const elapsed = Date.now() - startedAt
-  console.log(`✅ ${uniqueApps.length} applications (${parsed} fichiers .desktop lus) in ${elapsed}ms`)
+  console.log(
+    `✅ ${uniqueApps.length} applications (${parsed} fichiers .desktop lus) in ${elapsed}ms`
+  )
 
   return uniqueApps.sort((a, b) => a.name.localeCompare(b.name))
-}
-
-// === EXPORTS ===
-
-export {
-  scanApplications
 }

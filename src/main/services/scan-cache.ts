@@ -6,7 +6,14 @@
  * venait d'être calculé.
  */
 
+import type { RuntimeValue } from '../../shared/types.js'
 import { SCAN_CACHE_TTL } from '../config.js'
+
+/** Clés des scans mémorisés, partagées entre IPC et protocole applicatif. */
+export const SCAN_KEYS = {
+  applications: 'applications',
+  files: 'files'
+} as const
 
 /** Entrée mémorisée, avec sa date d'expiration. */
 interface CacheEntry<T> {
@@ -15,7 +22,7 @@ interface CacheEntry<T> {
 }
 
 /** Résultats mémorisés, indexés par nom de scan. */
-const scanCache = new Map<string, CacheEntry<unknown>>()
+const scanCache = new Map<string, CacheEntry<RuntimeValue>>()
 
 /**
  * Retourne un scan mémorisé, en le recalculant s'il a expiré.
@@ -23,7 +30,7 @@ const scanCache = new Map<string, CacheEntry<unknown>>()
  * @param key - Identifiant du scan
  * @param scanFn - Fonction appelée lorsque le cache est froid ou périmé
  */
-export function getCachedScan<T>(key: string, scanFn: () => T): T {
+export function getCachedScan<T extends RuntimeValue>(key: string, scanFn: () => T): T {
   const cached = scanCache.get(key)
   const now = Date.now()
 

@@ -6,30 +6,23 @@
  * vérifiés avant un effet système.
  */
 
-import { dialog, ipcMain, shell } from 'electron'
-import type { IpcMainEvent, IpcMainInvokeEvent } from 'electron'
 import fs from 'node:fs'
 import path from 'node:path'
+import type { IpcMainEvent, IpcMainInvokeEvent } from 'electron'
+import { dialog, ipcMain, shell } from 'electron'
 
 import { COMMAND_CHANNELS, REQUEST_CHANNELS } from '../../shared/ipc-contracts.js'
-import type { RefreshIndexResult } from '../../shared/types.js'
+import type { RefreshIndexResult, RuntimeValue } from '../../shared/types.js'
 
 import { scanApplications } from '../scanners/app-scanner.js'
 import { scanFiles } from '../scanners/file-scanner.js'
 import { clearIconCache } from '../scanners/icon-finder.js'
-import {
-  getSettingById,
-  getSettingState,
-  searchSettings
-} from '../scanners/settings-scanner.js'
+import { getSettingById, getSettingState, searchSettings } from '../scanners/settings-scanner.js'
 import { launchDetachedProcess } from '../services/launcher.js'
 import { eraseLocalData } from '../services/privacy.js'
-import { getCachedScan, invalidateScanCache } from '../services/scan-cache.js'
+import { getCachedScan, invalidateScanCache, SCAN_KEYS } from '../services/scan-cache.js'
 import { executeSettingAction } from '../services/setting-actions.js'
-import {
-  scheduleCleanup,
-  writeCommandScript
-} from '../services/terminal-command.js'
+import { scheduleCleanup, writeCommandScript } from '../services/terminal-command.js'
 import {
   parseCommandArguments,
   stripDesktopFieldCodes,
@@ -40,21 +33,12 @@ import {
 import { getMainWindow, hideWindow } from '../window.js'
 import { isTrustedIpcSender } from './sender-security.js'
 
-const CACHE_KEY = {
-  applications: 'applications',
-  files: 'files'
-} as const
-
 type IpcEvent = IpcMainEvent | IpcMainInvokeEvent
 
 function hasTrustedSender(event: IpcEvent): boolean {
   const window = getMainWindow()
 
-  return Boolean(
-    window &&
-    !window.isDestroyed() &&
-    isTrustedIpcSender(event, window.webContents)
-  )
+  return Boolean(window && !window.isDestroyed() && isTrustedIpcSender(event, window.webContents))
 }
 
 function assertTrustedSender(event: IpcEvent): void {
@@ -64,10 +48,10 @@ function assertTrustedSender(event: IpcEvent): void {
 }
 
 /** Retourne uniquement un chemin présent dans l'index détenu par le main. */
-function getTrustedIndexedPath(candidate: unknown): string | null {
+function getTrustedIndexedPath(candidate: RuntimeValue): string | null {
   if (typeof candidate !== 'string') return null
 
-  const indexed = getCachedScan(CACHE_KEY.files, scanFiles).some(
+  const indexed = getCachedScan(SCAN_KEYS.files, scanFiles).some(
     (entry) => entry.path === candidate
   )
 
@@ -75,8 +59,8 @@ function getTrustedIndexedPath(candidate: unknown): string | null {
 }
 
 export function warmUpScans(): void {
-  getCachedScan(CACHE_KEY.applications, scanApplications)
-  getCachedScan(CACHE_KEY.files, scanFiles)
+  getCachedScan(SCAN_KEYS.applications, scanApplications)
+  getCachedScan(SCAN_KEYS.files, scanFiles)
 }
 
 export function registerIpcHandlers(): void {
@@ -87,36 +71,32 @@ export function registerIpcHandlers(): void {
 
   ipcMain.handle(REQUEST_CHANNELS.GET_APPLICATIONS, async (event) => {
     assertTrustedSender(event)
-    return getCachedScan(CACHE_KEY.applications, scanApplications)
+    return getCachedScan(SCAN_KEYS.applications, scanApplications)
   })
 
   ipcMain.handle(REQUEST_CHANNELS.GET_FILES, async (event) => {
     assertTrustedSender(event)
-    return getCachedScan(CACHE_KEY.files, scanFiles)
+    return getCachedScan(SCAN_KEYS.files, scanFiles)
   })
 
-  ipcMain.handle(
-    REQUEST_CHANNELS.REFRESH_INDEX,
-    async (event): Promise<RefreshIndexResult> => {
-      assertTrustedSender(event)
-      invalidateScanCache()
-      clearIconCache()
+  ipcMain.handle(REQUEST_CHANNELS.REFRESH_INDEX, async (event): Promise<RefreshIndexResult> => {
+    assertTrustedSender(event)
+    invalidateScanCache()
+    clearIconCache()
 
-      return {
-        applications: getCachedScan(CACHE_KEY.applications, scanApplications),
-        files: getCachedScan(CACHE_KEY.files, scanFiles)
-      }
+    return {
+      applications: getCachedScan(SCAN_KEYS.applications, scanApplications),
+      files: getCachedScan(SCAN_KEYS.files, scanFiles)
     }
-  )
+  })
 
-  ipcMain.on(COMMAND_CHANNELS.LAUNCH_APP, (event, desktopFilePath: unknown) => {
+  ipcMain.on(COMMAND_CHANNELS.LAUNCH_APP, (event, desktopFilePath: RuntimeValue) => {
     if (!hasTrustedSender(event) || typeof desktopFilePath !== 'string') return
 
     // Le renderer fournit un identifiant, jamais la commande `Exec=`.
-    const application = getCachedScan(
-      CACHE_KEY.applications,
-      scanApplications
-    ).find((entry) => entry.path === desktopFilePath)
+    const application = getCachedScan(SCAN_KEYS.applications, scanApplications).find(
+      (entry) => entry.path === desktopFilePath
+    )
     const cleanExec = validateExecCommand(application?.exec)
 
     if (!cleanExec) {
@@ -131,7 +111,7 @@ export function registerIpcHandlers(): void {
     hideWindow()
   })
 
-  ipcMain.on(COMMAND_CHANNELS.OPEN_FILE, (event, filePath: unknown) => {
+  ipcMain.on(COMMAND_CHANNELS.OPEN_FILE, (event, filePath: RuntimeValue) => {
     if (!hasTrustedSender(event)) return
     const validPath = getTrustedIndexedPath(filePath)
 
@@ -144,7 +124,7 @@ export function registerIpcHandlers(): void {
     hideWindow()
   })
 
-  ipcMain.on(COMMAND_CHANNELS.OPEN_LOCATION, (event, filePath: unknown) => {
+  ipcMain.on(COMMAND_CHANNELS.OPEN_LOCATION, (event, filePath: RuntimeValue) => {
     if (!hasTrustedSender(event)) return
     const validPath = getTrustedIndexedPath(filePath)
 
@@ -164,7 +144,7 @@ export function registerIpcHandlers(): void {
     hideWindow()
   })
 
-  ipcMain.on(COMMAND_CHANNELS.OPEN_WEB_SEARCH, (event, query: unknown) => {
+  ipcMain.on(COMMAND_CHANNELS.OPEN_WEB_SEARCH, (event, query: RuntimeValue) => {
     if (!hasTrustedSender(event) || typeof query !== 'string') return
 
     const cleanQuery = query.trim().slice(0, 1000)
@@ -173,14 +153,13 @@ export function registerIpcHandlers(): void {
     const searchUrl = new URL('https://www.google.com/search')
     searchUrl.searchParams.set('q', cleanQuery)
 
-    void shell.openExternal(searchUrl.href).catch((error: unknown) => {
-      const message = error instanceof Error ? error.message : String(error)
-      console.error('Web search failed:', message)
+    void shell.openExternal(searchUrl.href).catch(() => {
+      console.error('Web search failed')
     })
     hideWindow()
   })
 
-  ipcMain.on(COMMAND_CHANNELS.EXECUTE_COMMAND, (event, command: unknown) => {
+  ipcMain.on(COMMAND_CHANNELS.EXECUTE_COMMAND, (event, command: RuntimeValue) => {
     if (!hasTrustedSender(event)) return
     const validCommand = validateUserCommand(command)
     const window = getMainWindow()
@@ -191,37 +170,35 @@ export function registerIpcHandlers(): void {
     }
 
     // Cette confirmation native reste hors de portée d'un renderer compromis.
-    void dialog.showMessageBox(window, {
-      type: 'warning',
-      title: 'Confirmer la commande',
-      message: 'Exécuter cette commande dans un terminal ?',
-      detail: validCommand,
-      buttons: ['Annuler', 'Exécuter'],
-      defaultId: 0,
-      cancelId: 0,
-      noLink: true
-    }).then(({ response }) => {
-      if (response !== 1) return
+    void dialog
+      .showMessageBox(window, {
+        type: 'warning',
+        title: 'Confirmer la commande',
+        message: 'Exécuter cette commande dans un terminal ?',
+        detail: validCommand,
+        buttons: ['Annuler', 'Exécuter'],
+        defaultId: 0,
+        cancelId: 0,
+        noLink: true
+      })
+      .then(({ response }) => {
+        if (response !== 1) return
 
-      try {
-        const scriptPath = writeCommandScript(validCommand)
-        launchDetachedProcess(
-          ['x-terminal-emulator', '-e', scriptPath],
-          'Command in terminal'
-        )
-        scheduleCleanup(scriptPath)
-        hideWindow()
-      } catch (error: unknown) {
-        const message = error instanceof Error ? error.message : String(error)
-        console.error('Error creating command script:', message)
-      }
-    }).catch((error: unknown) => {
-      const message = error instanceof Error ? error.message : String(error)
-      console.error('Command confirmation failed:', message)
-    })
+        try {
+          const scriptPath = writeCommandScript(validCommand)
+          launchDetachedProcess(['x-terminal-emulator', '-e', scriptPath], 'Command in terminal')
+          scheduleCleanup(scriptPath)
+          hideWindow()
+        } catch {
+          console.error('Error creating command script')
+        }
+      })
+      .catch(() => {
+        console.error('Command confirmation failed')
+      })
   })
 
-  ipcMain.handle(REQUEST_CHANNELS.SEARCH_SETTINGS, async (event, query: unknown) => {
+  ipcMain.handle(REQUEST_CHANNELS.SEARCH_SETTINGS, async (event, query: RuntimeValue) => {
     assertTrustedSender(event)
     return searchSettings(typeof query === 'string' ? query : '')
   })
@@ -248,18 +225,15 @@ export function registerIpcHandlers(): void {
     return eraseLocalData()
   })
 
-  ipcMain.handle(
-    REQUEST_CHANNELS.GET_SETTING_STATE,
-    async (event, settingId: unknown) => {
-      assertTrustedSender(event)
-      if (typeof settingId !== 'string') return false
-      return getSettingState(settingId)
-    }
-  )
+  ipcMain.handle(REQUEST_CHANNELS.GET_SETTING_STATE, async (event, settingId: RuntimeValue) => {
+    assertTrustedSender(event)
+    if (typeof settingId !== 'string') return false
+    return getSettingState(settingId)
+  })
 
   ipcMain.on(
     COMMAND_CHANNELS.EXECUTE_SETTING_ACTION,
-    async (event, settingId: unknown, actionId: unknown) => {
+    async (event, settingId: RuntimeValue, actionId: RuntimeValue) => {
       if (!hasTrustedSender(event)) return
       if (typeof settingId !== 'string' || typeof actionId !== 'string') return
 

@@ -6,6 +6,13 @@
  * l'application.
  */
 
+/**
+ * Valeur JavaScript reçue depuis une frontière d'exécution non typée.
+ * Cette union oblige chaque consommateur à effectuer un rétrécissement avant
+ * usage, sans introduire de type échappatoire.
+ */
+export type RuntimeValue = object | string | number | bigint | boolean | symbol | null | undefined
+
 /** Une application installée, issue d'un fichier .desktop. */
 export interface AppEntry {
   /** Libellé affiché, localisé lorsque le fichier .desktop le fournit. */
@@ -48,19 +55,6 @@ export interface SerializedSetting {
   actions: SettingAction[]
   /** Score de pertinence pour la requête courante. */
   score: number
-}
-
-/**
- * Résultat de l'effacement des données locales.
- *
- * Permet à l'utilisateur de constater ce qui a effectivement été supprimé,
- * comme l'exige le devoir de transparence (article 12 du RGPD).
- */
-export interface EraseResult {
-  /** Emplacements effacés, sous forme de noms lisibles. */
-  emplacements: string[]
-  /** Vrai si l'historique de recherche a été retiré. */
-  historiqueEfface: boolean
 }
 
 /** Résultat d'un rafraîchissement complet de l'index. */

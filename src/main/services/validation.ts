@@ -14,6 +14,7 @@ import fs from 'node:fs'
 import path from 'node:path'
 
 import { SYSTEM_DATA_ROOTS } from '../../shared/paths.js'
+import type { RuntimeValue } from '../../shared/types.js'
 import { isPathInside } from './path-security.js'
 
 /** Longueur maximale acceptée pour une commande, en caractères. */
@@ -66,7 +67,7 @@ const BLOCKED_USER_COMMANDS: readonly RegExp[] = [
  * @param filePath - Chemin proposé par le renderer
  * @returns Chemin absolu vérifié, ou `null` si l'accès est refusé
  */
-export function validateAndSanitizePath(filePath: unknown): string | null {
+export function validateAndSanitizePath(filePath: RuntimeValue): string | null {
   if (!filePath || typeof filePath !== 'string') {
     console.error('Invalid file path: not a string')
     return null
@@ -85,8 +86,8 @@ export function validateAndSanitizePath(filePath: unknown): string | null {
     // Si le répertoire personnel est introuvable, seuls les emplacements
     // système restent ouverts : la comparaison sur une valeur absente lèverait
     // une exception qui masquerait la raison du refus.
-    const allowedPaths = [homeDir, ...SYSTEM_DATA_ROOTS].filter(
-      (candidate): candidate is string => Boolean(candidate)
+    const allowedPaths = [homeDir, ...SYSTEM_DATA_ROOTS].filter((candidate): candidate is string =>
+      Boolean(candidate)
     )
 
     // Valider la cible réelle empêche qu'un lien symbolique situé dans HOME
@@ -102,9 +103,7 @@ export function validateAndSanitizePath(filePath: unknown): string | null {
       return null
     }
 
-    const isForbidden = FORBIDDEN_PATH_FRAGMENTS.some((fragment) =>
-      realPath.includes(fragment)
-    )
+    const isForbidden = FORBIDDEN_PATH_FRAGMENTS.some((fragment) => realPath.includes(fragment))
 
     if (isForbidden) {
       console.error('Access denied: forbidden file pattern')
@@ -128,7 +127,7 @@ export function validateAndSanitizePath(filePath: unknown): string | null {
  * @param execCommand - Valeur brute du champ `Exec=`
  * @returns Commande acceptée, ou `null`
  */
-export function validateExecCommand(execCommand: unknown): string | null {
+export function validateExecCommand(execCommand: RuntimeValue): string | null {
   if (!execCommand || typeof execCommand !== 'string') {
     return null
   }
@@ -184,11 +183,7 @@ export function parseCommandArguments(commandLine: string): string[] {
         args.push(current)
         current = ''
       }
-    } else if (
-      char === '\\' &&
-      inQuotes &&
-      (nextChar === '"' || nextChar === "'")
-    ) {
+    } else if (char === '\\' && inQuotes && (nextChar === '"' || nextChar === "'")) {
       current += nextChar
       i++
     } else {
@@ -272,7 +267,7 @@ export function stripDesktopFieldCodes(args: readonly string[]): string[] {
  * @param command - Commande saisie
  * @returns Commande acceptée, ou `null`
  */
-export function validateUserCommand(command: unknown): string | null {
+export function validateUserCommand(command: RuntimeValue): string | null {
   if (!command || typeof command !== 'string') {
     return null
   }

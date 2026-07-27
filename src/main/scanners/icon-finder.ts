@@ -12,7 +12,7 @@
 
 import fs from 'node:fs'
 import path from 'node:path'
-import { ICON_THEME_DIRS, FLAT_ICON_DIRS } from '../../shared/paths.js'
+import { FLAT_ICON_DIRS, ICON_THEME_DIRS } from '../../shared/paths.js'
 import { BoundedCache } from '../services/bounded-cache.js'
 
 /**
@@ -44,12 +44,33 @@ const ICON_EXTENSIONS = ['.svg', '.png', '.xpm']
  * les icônes en grand, un downscale est plus propre qu'un upscale.
  */
 const ICON_SIZES = [
-  'scalable', '512x512', '256x256', '192x192', '128x128', '96x96',
-  '72x72', '64x64', '48x48', '36x36', '32x32', '24x24', '22x22', '16x16',
+  'scalable',
+  '512x512',
+  '256x256',
+  '192x192',
+  '128x128',
+  '96x96',
+  '72x72',
+  '64x64',
+  '48x48',
+  '36x36',
+  '32x32',
+  '24x24',
+  '22x22',
+  '16x16',
   // "symbolic" est un pseudo-dossier de taille utilisé par Adwaita et hicolor
   'symbolic',
   // Certains thèmes (LoginIcons) notent la taille sans le suffixe "xN"
-  '512', '256', '128', '96', '64', '48', '32', '24', '22', '16'
+  '512',
+  '256',
+  '128',
+  '96',
+  '64',
+  '48',
+  '32',
+  '24',
+  '22',
+  '16'
 ]
 
 /**
@@ -57,8 +78,15 @@ const ICON_SIZES = [
  * les autres servent aux icônes génériques référencées par certains .desktop.
  */
 const ICON_CATEGORIES = [
-  'apps', 'devices', 'places', 'mimetypes',
-  'status', 'actions', 'categories', 'emblems', 'legacy'
+  'apps',
+  'devices',
+  'places',
+  'mimetypes',
+  'status',
+  'actions',
+  'categories',
+  'emblems',
+  'legacy'
 ]
 
 /**
@@ -67,11 +95,7 @@ const ICON_CATEGORIES = [
  */
 const PREFERRED_THEMES = ['hicolor', 'Yaru', 'Adwaita', 'gnome', 'Humanity']
 
-/**
- * Liste le contenu d'un répertoire, avec mise en cache.
- * @param {string} dir - Répertoire à lister
- * @returns {string[]} Noms des entrées (vide si inaccessible)
- */
+/** Liste le contenu d'un répertoire, avec mise en cache (vide si inaccessible). */
 function listDir(dir: string): string[] {
   const cached = dirEntriesCache.get(dir)
   if (cached !== undefined) {
@@ -81,7 +105,7 @@ function listDir(dir: string): string[] {
   let entries: string[] = []
   try {
     entries = fs.readdirSync(dir)
-  } catch (error) {
+  } catch {
     // Répertoire absent ou illisible : on retient le résultat vide
   }
 
@@ -89,12 +113,7 @@ function listDir(dir: string): string[] {
   return entries
 }
 
-/**
- * Cherche une icône dont le nom de base correspond, quelle que soit l'extension.
- * @param {string} dir - Répertoire à inspecter
- * @param {string} iconName - Nom de l'icône sans extension
- * @returns {string|null} Chemin trouvé ou null
- */
+/** Cherche une icône dont le nom de base correspond, quelle que soit l'extension. */
 function findInDir(dir: string, iconName: string): string | null {
   const entries = listDir(dir)
   if (entries.length === 0) return null
@@ -117,23 +136,17 @@ function findInDir(dir: string, iconName: string): string | null {
 /**
  * Liste les thèmes d'un répertoire de base, en plaçant les thèmes usuels
  * en tête pour trouver l'icône au plus vite.
- * @param {string} baseDir - Répertoire de base (ex. /usr/share/icons)
- * @returns {string[]} Noms de thèmes ordonnés
  */
 function listThemes(baseDir: string): string[] {
   const entries = listDir(baseDir)
 
-  const preferred = PREFERRED_THEMES.filter(t => entries.includes(t))
+  const preferred = PREFERRED_THEMES.filter((t) => entries.includes(t))
   const others = entries.filter((e: string) => !PREFERRED_THEMES.includes(e) && !e.includes('.'))
 
   return [...preferred, ...others]
 }
 
-/**
- * Résout un chemin d'icône absolu, avec repli sur les autres versions d'un snap.
- * @param {string} iconName - Chemin absolu déclaré dans le .desktop
- * @returns {string|null} Chemin existant ou null
- */
+/** Résout un chemin d'icône absolu, avec repli sur les autres versions d'un snap. */
 function resolveAbsoluteIcon(iconName: string): string | null {
   if (fs.existsSync(iconName)) {
     return iconName
@@ -161,13 +174,8 @@ function resolveAbsoluteIcon(iconName: string): string | null {
   return null
 }
 
-/**
- * Index d'un thème : nom d'icône sans extension -> chemin complet
- * @type {Map<string, Map<string, string>>}
- */
-const themeIndexCache = new BoundedCache<string, Map<string, string>>(
-  MAX_CACHED_THEMES
-)
+/** Index d'un thème : nom d'icône sans extension -> chemin complet. */
+const themeIndexCache = new BoundedCache<string, Map<string, string>>(MAX_CACHED_THEMES)
 
 /**
  * Construit (ou récupère) l'index d'un thème d'icônes.
@@ -179,9 +187,6 @@ const themeIndexCache = new BoundedCache<string, Map<string, string>>(
  *
  * Les dossiers sont indexés dans l'ordre de préférence, et la première
  * occurrence d'un nom l'emporte : l'index reflète le meilleur candidat.
- *
- * @param {string} themeDir - Répertoire du thème
- * @returns {Map<string, string>} Index nom -> chemin
  */
 function buildThemeIndex(themeDir: string): Map<string, string> {
   const cachedIndex = themeIndexCache.get(themeDir)
@@ -229,22 +234,12 @@ function buildThemeIndex(themeDir: string): Map<string, string> {
   return index
 }
 
-/**
- * Cherche une icône dans l'index d'un thème
- * @param {string} themeDir - Répertoire du thème
- * @param {string} iconName - Nom de l'icône sans extension
- * @returns {string|null} Chemin trouvé ou null
- */
 function lookupInThemeIndex(themeDir: string, iconName: string): string | null {
   return buildThemeIndex(themeDir).get(iconName) || null
 }
 
-/**
- * Trouve le chemin d'une icône à partir de son nom
- * @param {string} iconName - Nom ou chemin de l'icône (champ Icon= du .desktop)
- * @returns {string|null} Chemin complet ou null si introuvable
- */
-function findIcon(iconName: string | null | undefined): string | null {
+/** Résout le champ Icon= d'un .desktop (nom ou chemin) en chemin complet. */
+export function findIcon(iconName: string | null | undefined): string | null {
   if (!iconName) return null
 
   const cachedIcon = iconCache.get(iconName)
@@ -293,16 +288,9 @@ function findIcon(iconName: string | null | undefined): string | null {
   return result
 }
 
-/**
- * Vide les caches (utile si des applications sont installées en cours de session)
- */
-function clearIconCache(): void {
+/** Vide les caches (utile si des applications sont installées en cours de session). */
+export function clearIconCache(): void {
   iconCache.clear()
   dirEntriesCache.clear()
   themeIndexCache.clear()
-}
-
-export {
-  findIcon,
-  clearIconCache
 }

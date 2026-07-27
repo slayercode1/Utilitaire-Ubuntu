@@ -17,8 +17,7 @@ import path from 'node:path'
  * chemin relatif qui n'existera pas, ce qui écarte simplement l'emplacement au
  * lieu de faire échouer le scan. USERPROFILE couvre Windows.
  */
-export const HOME: string =
-  process.env['HOME'] || process.env['USERPROFILE'] || ''
+export const HOME: string = process.env['HOME'] || process.env['USERPROFILE'] || ''
 
 /**
  * Racines système contenant des données applicatives partagées.
@@ -28,6 +27,7 @@ export const SYSTEM_DATA_ROOTS: readonly string[] = Object.freeze([
   '/usr/share',
   '/usr/local/share',
   '/opt',
+  '/snap',
   '/var/lib/flatpak',
   '/var/lib/snapd'
 ])

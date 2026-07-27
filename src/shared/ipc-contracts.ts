@@ -43,14 +43,3 @@ export const IPC_CHANNELS = Object.freeze({
   ...REQUEST_CHANNELS,
   ...COMMAND_CHANNELS
 } as const)
-
-/** Nom d'un canal de requête. */
-export type RequestChannel =
-  (typeof REQUEST_CHANNELS)[keyof typeof REQUEST_CHANNELS]
-
-/** Nom d'un canal de commande. */
-export type CommandChannel =
-  (typeof COMMAND_CHANNELS)[keyof typeof COMMAND_CHANNELS]
-
-/** Nom de canal, toutes catégories confondues. */
-export type IpcChannel = RequestChannel | CommandChannel

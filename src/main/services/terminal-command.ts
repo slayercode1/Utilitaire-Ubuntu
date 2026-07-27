@@ -53,10 +53,7 @@ read
  * @param options - Répertoire d'accueil
  * @returns Chemin du script créé
  */
-export function writeCommandScript(
-  command: string,
-  options: WriteScriptOptions = {}
-): string {
+export function writeCommandScript(command: string, options: WriteScriptOptions = {}): string {
   const tmpDir = options.tmpDir ?? os.tmpdir()
   const scriptId = crypto.randomBytes(8).toString('hex')
   const scriptPath = path.join(tmpDir, `finder-cmd-${scriptId}.sh`)
@@ -88,10 +85,7 @@ export function removeCommandScript(scriptPath: string): void {
  * @param delay - Délai en millisecondes
  * @returns Minuteur, pour permettre son annulation
  */
-export function scheduleCleanup(
-  scriptPath: string,
-  delay: number = CLEANUP_DELAY
-): NodeJS.Timeout {
+export function scheduleCleanup(scriptPath: string, delay: number = CLEANUP_DELAY): NodeJS.Timeout {
   const timer = setTimeout(() => removeCommandScript(scriptPath), delay)
 
   // Ce minuteur ne doit pas retarder la fermeture de l'application

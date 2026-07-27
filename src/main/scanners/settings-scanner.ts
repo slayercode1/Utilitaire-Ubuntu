@@ -7,9 +7,9 @@
 
 import { execFile } from 'node:child_process'
 import util from 'node:util'
-
-import type { SettingDefinition } from '../services/setting-actions.js'
 import type { SerializedSetting } from '../../shared/types.js'
+import type { SettingDefinition } from '../services/setting-actions.js'
+
 const execFileAsync = util.promisify(execFile)
 
 /**
@@ -19,7 +19,16 @@ const SYSTEM_SETTINGS = [
   {
     id: 'wifi',
     name: 'WiFi',
-    keywords: ['wifi', 'wi-fi', 'réseau', 'network', 'internet', 'connexion', 'sans fil', 'wireless'],
+    keywords: [
+      'wifi',
+      'wi-fi',
+      'réseau',
+      'network',
+      'internet',
+      'connexion',
+      'sans fil',
+      'wireless'
+    ],
     icon: '📶',
     actions: [
       {
@@ -27,12 +36,10 @@ const SYSTEM_SETTINGS = [
         name: 'Activer/Désactiver',
         icon: '🔄',
         command: async () => {
-          // Vérifier l'état actuel du WiFi
           try {
             const { stdout } = await execFileAsync('nmcli', ['radio', 'wifi'])
             const isEnabled = stdout.trim() === 'enabled'
 
-            // Inverser l'état
             if (isEnabled) {
               await execFileAsync('nmcli', ['radio', 'wifi', 'off'])
               return 'WiFi désactivé'
@@ -40,8 +47,8 @@ const SYSTEM_SETTINGS = [
               await execFileAsync('nmcli', ['radio', 'wifi', 'on'])
               return 'WiFi activé'
             }
-          } catch (error) {
-            throw new Error('Impossible de changer l\'état du WiFi')
+          } catch {
+            throw new Error("Impossible de changer l'état du WiFi")
           }
         }
       },
@@ -50,8 +57,8 @@ const SYSTEM_SETTINGS = [
         name: 'Ouvrir les paramètres',
         icon: '⚙️',
         command: 'gnome-control-center wifi',
-        commandAlt: 'xfce4-settings-manager', // Fallback pour XFCE
-        commandAlt2: 'systemsettings5' // Fallback pour KDE
+        commandAlt: 'xfce4-settings-manager',
+        commandAlt2: 'systemsettings5'
       }
     ]
   },
@@ -77,8 +84,8 @@ const SYSTEM_SETTINGS = [
               await execFileAsync('rfkill', ['block', 'bluetooth'])
               return 'Bluetooth désactivé'
             }
-          } catch (error) {
-            throw new Error('Impossible de changer l\'état du Bluetooth')
+          } catch {
+            throw new Error("Impossible de changer l'état du Bluetooth")
           }
         }
       },
@@ -108,7 +115,7 @@ const SYSTEM_SETTINGS = [
             const { stdout } = await execFileAsync('pactl', ['get-sink-mute', '@DEFAULT_SINK@'])
             const isMuted = stdout.includes('yes')
             return isMuted ? 'Son coupé' : 'Son rétabli'
-          } catch (error) {
+          } catch {
             throw new Error('Impossible de modifier le son')
           }
         }
@@ -126,7 +133,16 @@ const SYSTEM_SETTINGS = [
   {
     id: 'display',
     name: 'Affichage / Écran',
-    keywords: ['affichage', 'écran', 'display', 'screen', 'moniteur', 'monitor', 'résolution', 'resolution'],
+    keywords: [
+      'affichage',
+      'écran',
+      'display',
+      'screen',
+      'moniteur',
+      'monitor',
+      'résolution',
+      'resolution'
+    ],
     icon: '🖥️',
     actions: [
       {
@@ -270,12 +286,7 @@ const SYSTEM_SETTINGS = [
 ]
 
 /**
- * Recherche dans les paramètres système
- * @param {string} query - Requête de recherche
- * @returns {object[]} Paramètres correspondants
- */
-/**
- * Sérialise un paramètre pour l'envoyer via IPC (enlève les fonctions)
+ * Sérialise un paramètre pour l'envoyer via IPC (enlève les fonctions).
  */
 function serializeSetting(
   setting: SettingDefinition & {
@@ -291,7 +302,6 @@ function serializeSetting(
     keywords: setting.keywords,
     icon: setting.icon,
     resultType: 'setting',
-    // Sérialiser les actions en enlevant les fonctions
     actions: (setting.actions ?? []).map((action) => ({
       id: action.id,
       // Le contrat IPC impose ces champs : un libellé absent deviendrait
@@ -311,22 +321,17 @@ function serializeSetting(
  * travail répété inutilement. Les formes minuscules et la version sérialisée
  * sont donc calculées d'avance.
  */
-const SETTINGS_INDEX = SYSTEM_SETTINGS.map(setting => ({
+const SETTINGS_INDEX = SYSTEM_SETTINGS.map((setting) => ({
   setting,
   serialized: serializeSetting(setting),
   lowerName: setting.name.toLowerCase(),
-  lowerKeywords: setting.keywords.map(k => k.toLowerCase())
+  lowerKeywords: setting.keywords.map((k) => k.toLowerCase())
 }))
 
-/**
- * Recherche dans les paramètres système
- * @param {string} query - Requête de recherche
- * @returns {object[]} Paramètres correspondants, triés par pertinence
- */
-function searchSettings(query: string): SerializedSetting[] {
-  // Si pas de requête, retourner tous les paramètres
+/** Recherche dans les paramètres système, triés par pertinence. */
+export function searchSettings(query: string): SerializedSetting[] {
   if (!query || query.trim().length === 0) {
-    return SETTINGS_INDEX.map(entry => ({ ...entry.serialized, score: 0 }))
+    return SETTINGS_INDEX.map((entry) => ({ ...entry.serialized, score: 0 }))
   }
 
   const lowerQuery = query.toLowerCase().trim()
@@ -345,15 +350,13 @@ function searchSettings(query: string): SerializedSetting[] {
         break
       }
 
-      if (!matchesKeywords &&
-          (keyword.includes(lowerQuery) || lowerQuery.includes(keyword))) {
+      if (!matchesKeywords && (keyword.includes(lowerQuery) || lowerQuery.includes(keyword))) {
         matchesKeywords = true
       }
     }
 
     if (!matchesName && !matchesKeywords) continue
 
-    // Calculer un score de pertinence
     let score = 0
     if (matchesName) score += 10
     if (matchesKeywords) score += 5
@@ -364,53 +367,40 @@ function searchSettings(query: string): SerializedSetting[] {
     results.push({ ...entry.serialized, score })
   }
 
-  // Trier par score de pertinence
-  results.sort((a, b) => b.score - a.score)
-
-  return results
+  return results.sort((a, b) => b.score - a.score)
 }
 
-/**
- * Récupère un paramètre par son ID
- * @param {string} settingId - ID du paramètre
- * @returns {Object|null} Paramètre trouvé ou null
- */
-function getSettingById(settingId: string): SettingDefinition | null {
-  return SYSTEM_SETTINGS.find(s => s.id === settingId) || null
+export function getSettingById(settingId: string): SettingDefinition | null {
+  return SYSTEM_SETTINGS.find((s) => s.id === settingId) || null
 }
 
-/**
- * Vérifie l'état actuel d'un paramètre (pour les toggles)
- * @param {string} settingId - ID du paramètre
- * @returns {Promise<boolean>} true si activé, false sinon
- */
-async function getSettingState(settingId: string): Promise<boolean> {
+/** Vérifie l'état actuel d'un paramètre (pour les toggles). */
+export async function getSettingState(settingId: string): Promise<boolean> {
   try {
     switch (settingId) {
-      case 'wifi':
+      case 'wifi': {
         const { stdout: wifiState } = await execFileAsync('nmcli', ['radio', 'wifi'])
         return wifiState.trim() === 'enabled'
+      }
 
-      case 'bluetooth':
+      case 'bluetooth': {
         const { stdout: btState } = await execFileAsync('rfkill', ['list', 'bluetooth'])
         return !btState.includes('Soft blocked: yes')
+      }
 
-      case 'sound':
-        const { stdout: soundState } = await execFileAsync('pactl', ['get-sink-mute', '@DEFAULT_SINK@'])
-        return !soundState.includes('yes') // true si pas muted
+      case 'sound': {
+        const { stdout: soundState } = await execFileAsync('pactl', [
+          'get-sink-mute',
+          '@DEFAULT_SINK@'
+        ])
+        return !soundState.includes('yes')
+      }
 
       default:
         return false
     }
-  } catch (error) {
-    console.error(`Error checking state for ${settingId}:`, error)
+  } catch {
+    console.error(`Error checking state for ${settingId}`)
     return false
   }
-}
-
-export {
-  searchSettings,
-  getSettingById,
-  getSettingState,
-  SYSTEM_SETTINGS
 }

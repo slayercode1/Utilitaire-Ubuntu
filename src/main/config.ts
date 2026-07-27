@@ -5,8 +5,8 @@
  * résout les chemins des ressources.
  */
 
-import { app } from 'electron'
 import path from 'node:path'
+import { app } from 'electron'
 
 /** Largeur de la fenêtre de recherche, en pixels. */
 export const WINDOW_WIDTH = 600
@@ -40,11 +40,11 @@ export const SCAN_CACHE_TTL = 60_000
  */
 const DIST_ROOT = path.join(__dirname, '..')
 
+/** Racine des seules ressources que le protocole applicatif peut servir. */
+export const RENDERER_ROOT = path.join(DIST_ROOT, 'renderer')
+
 /** Chemin du script de preload. */
 export const PRELOAD_PATH = path.join(DIST_ROOT, 'preload', 'index.js')
-
-/** Chemin du document chargé dans la fenêtre. */
-export const INDEX_HTML_PATH = path.join(DIST_ROOT, 'renderer', 'index.html')
 
 /**
  * Chemin de l'icône de l'application.

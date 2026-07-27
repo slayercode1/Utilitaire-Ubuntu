@@ -13,8 +13,6 @@ export function isPathInside(candidate: string, root: string): boolean {
 
   return (
     relative === '' ||
-    (relative !== '..' &&
-      !relative.startsWith(`..${path.sep}`) &&
-      !path.isAbsolute(relative))
+    (relative !== '..' && !relative.startsWith(`..${path.sep}`) && !path.isAbsolute(relative))
   )
 }
