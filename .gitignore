@@ -13,3 +13,7 @@ yarn-error.log*
 .out/
 dist-scripts/
 .electron-cache/
+coverage/
+playwright-report/
+qa-report/
+test-results/

@@ -1,0 +1,2 @@
+# Formatage + lint des seuls fichiers indexés, corrections réappliquées au stage
+npx lint-staged

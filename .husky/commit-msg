@@ -1,0 +1,3 @@
+# Messages au format Conventional Commits (feat:, fix:, docs:, chore:, …),
+# aligné sur l'historique existant du dépôt
+npx --no -- commitlint --edit "$1"

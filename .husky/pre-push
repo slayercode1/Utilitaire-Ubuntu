@@ -1,0 +1,3 @@
+# Barrière avant partage : types stricts + suite unitaire complète (~10 s).
+# Les suites E2E/régression restent manuelles ou CI : npm run test:all
+npm run typecheck && npm run test:unit
