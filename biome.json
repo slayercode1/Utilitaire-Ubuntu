@@ -10,6 +10,7 @@
       "src/**",
       "tests/**",
       "scripts/**",
+      "docs/**",
       "*.ts",
       "*.json",
       "!package-lock.json",

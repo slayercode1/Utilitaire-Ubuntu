@@ -1,0 +1,388 @@
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta
+      name="description"
+      content="Finder est le lanceur rapide et discret pour Linux. Recherchez vos applications et fichiers, calculez et convertissez sans quitter le clavier."
+    />
+    <meta name="theme-color" content="#f7f7f5" />
+    <meta name="color-scheme" content="light" />
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Finder — Tout Linux, à une touche" />
+    <meta
+      property="og:description"
+      content="Un lanceur rapide, sobre et pensé pour Linux. Bêta disponible gratuitement."
+    />
+    <meta property="og:image" content="./assets/finder-preview.png" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'self'; img-src 'self' data:; style-src 'self'; script-src 'self'; connect-src https://api.github.com; object-src 'none'; base-uri 'self'; form-action 'none'; upgrade-insecure-requests"
+    />
+    <link rel="icon" type="image/png" href="./assets/finder-icon.png" />
+    <link rel="stylesheet" href="./styles.css" />
+    <title>Finder — Lanceur rapide pour Linux</title>
+  </head>
+  <body>
+    <a class="skip-link" href="#contenu">Aller au contenu</a>
+
+    <header class="site-header" data-header>
+      <div class="nav-shell">
+        <a class="brand" href="#top" aria-label="Finder, accueil">
+          <img src="./assets/finder-icon.png" alt="" width="28" height="28" />
+          <span>Finder</span>
+          <span class="beta-tag">Bêta</span>
+        </a>
+
+        <button
+          class="menu-button"
+          type="button"
+          aria-expanded="false"
+          aria-controls="main-navigation"
+          data-menu-button
+        >
+          <span class="sr-only">Ouvrir le menu</span>
+          <span aria-hidden="true"></span>
+          <span aria-hidden="true"></span>
+        </button>
+
+        <nav id="main-navigation" class="main-nav" aria-label="Navigation principale" data-menu>
+          <a href="#fonctionnalites">Fonctionnalités</a>
+          <a href="#beta">La bêta</a>
+          <a href="#questions">Questions</a>
+          <a
+            class="nav-download"
+            href="https://github.com/slayercode1/Utilitaire-Ubuntu/releases/latest"
+            data-download="deb"
+          >
+            Télécharger
+          </a>
+        </nav>
+      </div>
+    </header>
+
+    <main id="contenu">
+      <section class="hero" id="top" aria-labelledby="hero-title">
+        <div class="hero-copy reveal">
+          <p class="eyebrow">Le lanceur pensé pour Linux</p>
+          <h1 id="hero-title">Tout ce qu’il vous faut.<br />À une touche.</h1>
+          <p class="hero-intro">
+            Applications, fichiers, calculs et commandes. Finder rassemble l’essentiel dans une
+            recherche rapide, discrète et entièrement pilotable au clavier.
+          </p>
+          <div class="hero-actions">
+            <a
+              class="button button-primary"
+              href="https://github.com/slayercode1/Utilitaire-Ubuntu/releases/latest"
+              data-download="deb"
+            >
+              <svg aria-hidden="true" viewBox="0 0 24 24">
+                <path d="M12 3v12m0 0 5-5m-5 5-5-5M5 21h14" />
+              </svg>
+              <span>Télécharger pour Ubuntu / Debian</span>
+            </a>
+            <a
+              class="button button-secondary"
+              href="https://github.com/slayercode1/Utilitaire-Ubuntu"
+            >
+              Voir le code source
+              <svg aria-hidden="true" viewBox="0 0 24 24"><path d="m9 18 6-6-6-6" /></svg>
+            </a>
+          </div>
+          <p class="release-note">
+            <span class="status-dot" aria-hidden="true"></span>
+            Bêta gratuite · Linux x64 · <span data-release-label>Dernière version</span>
+          </p>
+        </div>
+
+        <div class="product-stage reveal">
+          <div class="stage-toolbar" aria-hidden="true">
+            <span></span><span></span><span></span>
+            <p>Finder sur Ubuntu</p>
+            <kbd>Alt</kbd><b>+</b><kbd>Espace</kbd>
+          </div>
+          <img
+            src="./assets/finder-preview.png"
+            alt="Finder ouvert sur un bureau Linux, prêt à rechercher des applications, fichiers, commandes et conversions"
+            width="952"
+            height="588"
+            fetchpriority="high"
+          />
+        </div>
+
+        <a class="scroll-cue" href="#promesse">
+          Découvrir Finder
+          <svg aria-hidden="true" viewBox="0 0 24 24"><path d="m6 9 6 6 6-6" /></svg>
+        </a>
+      </section>
+
+      <section class="statement section-shell" id="promesse" aria-labelledby="statement-title">
+        <p class="section-label reveal">Moins d’interruptions</p>
+        <h2 id="statement-title" class="reveal">
+          Votre attention mérite mieux qu’une succession de menus.
+        </h2>
+        <p class="statement-copy reveal">
+          Finder reste en arrière-plan jusqu’à ce que vous en ayez besoin. Un raccourci, quelques
+          lettres, Entrée — puis vous reprenez votre travail.
+        </p>
+      </section>
+
+      <section class="features section-shell" id="fonctionnalites" aria-labelledby="features-title">
+        <div class="section-heading reveal">
+          <div>
+            <p class="section-label">Un seul point de départ</p>
+            <h2 id="features-title">Faites plus, cherchez moins.</h2>
+          </div>
+          <p>
+            Une interface unique pour les actions quotidiennes, conçue pour disparaître dès que la
+            tâche est accomplie.
+          </p>
+        </div>
+
+        <div class="feature-list">
+          <article class="feature-row reveal">
+            <p class="feature-number">01</p>
+            <div class="feature-icon" aria-hidden="true">
+              <svg aria-hidden="true" viewBox="0 0 24 24"><circle cx="11" cy="11" r="6" /><path d="m16 16 4 4" /></svg>
+            </div>
+            <div>
+              <h3>Retrouvez instantanément</h3>
+              <p>
+                Applications système, Snap, Flatpak, fichiers et dossiers : commencez à saisir,
+                Finder réduit le chemin.
+              </p>
+            </div>
+            <p class="feature-command"><kbd>.</kbd> firefox</p>
+          </article>
+
+          <article class="feature-row reveal">
+            <p class="feature-number">02</p>
+            <div class="feature-icon" aria-hidden="true">
+              <svg aria-hidden="true" viewBox="0 0 24 24"><path d="M8 3 4 7l4 4M16 13l4 4-4 4M14 4l-4 16" /></svg>
+            </div>
+            <div>
+              <h3>Agissez sans ouvrir d’outil</h3>
+              <p>
+                Lancez une commande, effectuez un calcul ou convertissez unités et devises depuis
+                le même champ.
+              </p>
+            </div>
+            <p class="feature-command"><kbd>to</kbd> 10 km to mi</p>
+          </article>
+
+          <article class="feature-row reveal">
+            <p class="feature-number">03</p>
+            <div class="feature-icon" aria-hidden="true">
+              <svg aria-hidden="true" viewBox="0 0 24 24"><path d="M12 3a9 9 0 1 0 9 9" /><path d="M12 7v5l3 2M17 3v4h4" /></svg>
+            </div>
+            <div>
+              <h3>Restez dans votre rythme</h3>
+              <p>
+                Navigation au clavier, historique récent et démarrage avec la session. Finder est
+                prêt avant que vous le demandiez.
+              </p>
+            </div>
+            <p class="feature-command"><kbd>Alt</kbd> + <kbd>Espace</kbd></p>
+          </article>
+        </div>
+      </section>
+
+      <section class="workflow section-shell" aria-labelledby="workflow-title">
+        <div class="workflow-copy reveal">
+          <p class="section-label">Aucune courbe d’apprentissage</p>
+          <h2 id="workflow-title">Ouvrez. Écrivez. Continuez.</h2>
+          <p>
+            Les préfixes restent optionnels. Utilisez Finder naturellement, ou affinez votre recherche
+            quand vous le souhaitez.
+          </p>
+          <dl class="shortcut-list">
+            <div><dt>.</dt><dd>Applications uniquement</dd></div>
+            <div><dt>?</dt><dd>Fichiers et dossiers</dd></div>
+            <div><dt>??</dt><dd>Recherche web directe</dd></div>
+            <div><dt>&gt;</dt><dd>Commande dans le terminal</dd></div>
+          </dl>
+        </div>
+
+        <div class="search-demo reveal" role="img" aria-label="Exemple de recherche Finder">
+          <div class="demo-input">
+            <svg aria-hidden="true" viewBox="0 0 24 24"><circle cx="11" cy="11" r="6" /><path d="m16 16 4 4" /></svg>
+            <span data-demo-query>firefox</span>
+            <span class="demo-caret" aria-hidden="true"></span>
+            <kbd>esc</kbd>
+          </div>
+          <div class="demo-result" aria-hidden="true">
+            <span class="result-icon">F</span>
+            <span><strong data-demo-title>Firefox</strong><small data-demo-meta>Application</small></span>
+            <kbd>↵</kbd>
+          </div>
+          <div class="demo-footer" aria-hidden="true">
+            <span>12 applications</span>
+            <span>↑↓ naviguer&nbsp;&nbsp; ↵ ouvrir</span>
+          </div>
+        </div>
+      </section>
+
+      <section class="trust section-shell" aria-labelledby="trust-title">
+        <div class="section-heading reveal">
+          <div>
+            <p class="section-label">Confiance vérifiable</p>
+            <h2 id="trust-title">Votre machine. Vos données.</h2>
+          </div>
+          <p>
+            Finder cherche localement. Le code peut être consulté et chaque publication est accompagnée
+            d’éléments de vérification.
+          </p>
+        </div>
+
+        <div class="trust-points reveal">
+          <div>
+            <svg aria-hidden="true" viewBox="0 0 24 24"><path d="M12 3 5 6v5c0 4.7 2.9 8.2 7 10 4.1-1.8 7-5.3 7-10V6l-7-3Z" /><path d="m9 12 2 2 4-4" /></svg>
+            <h3>Recherche locale</h3>
+            <p>Vos fichiers restent sur votre machine.</p>
+          </div>
+          <div>
+            <svg aria-hidden="true" viewBox="0 0 24 24"><path d="M4 5h16v14H4zM8 9l-2 3 2 3M16 9l2 3-2 3M14 8l-4 8" /></svg>
+            <h3>Source disponible</h3>
+            <p>Le fonctionnement peut être consulté et audité.</p>
+          </div>
+          <div>
+            <svg aria-hidden="true" viewBox="0 0 24 24"><path d="M12 3 4 6v6c0 5 3.4 8 8 9 4.6-1 8-4 8-9V6l-8-3Z" /><path d="m8.5 12 2.2 2.2 4.8-5" /></svg>
+            <h3>Releases vérifiables</h3>
+            <p>Checksums, signature Sigstore et provenance attestée.</p>
+          </div>
+        </div>
+      </section>
+
+      <section class="beta section-shell" id="beta" aria-labelledby="beta-title">
+        <div class="beta-panel reveal">
+          <div>
+            <p class="section-label">Une bêta, en toute transparence</p>
+            <h2 id="beta-title">Gratuit aujourd’hui.<br />Clair pour demain.</h2>
+          </div>
+          <div class="beta-copy">
+            <p>
+              Finder est actuellement proposé gratuitement en version bêta. Le produit évolue encore
+              et vos retours contribuent directement à ses priorités.
+            </p>
+            <p>
+              À l’avenir, certaines fonctionnalités ou certains usages pourraient intégrer une offre
+              payante. Si le modèle évolue, les conditions seront annoncées clairement à l’avance —
+              sans surprise.
+            </p>
+            <a href="https://github.com/slayercode1/Utilitaire-Ubuntu/issues/new/choose">
+              Partager un retour
+              <svg aria-hidden="true" viewBox="0 0 24 24"><path d="m9 18 6-6-6-6" /></svg>
+            </a>
+          </div>
+        </div>
+      </section>
+
+      <section class="faq section-shell" id="questions" aria-labelledby="faq-title">
+        <div class="faq-heading reveal">
+          <p class="section-label">Questions fréquentes</p>
+          <h2 id="faq-title">L’essentiel, avant d’installer.</h2>
+        </div>
+        <div class="faq-list reveal">
+          <details>
+            <summary>Sur quelles distributions Finder fonctionne-t-il ?</summary>
+            <p>
+              Le paquet .deb est prévu pour Ubuntu et Debian. Une AppImage x64 est également proposée
+              pour les autres distributions Linux compatibles.
+            </p>
+          </details>
+          <details>
+            <summary>Finder est-il vraiment gratuit ?</summary>
+            <p>
+              Oui, la bêta est gratuite pour un usage personnel et non commercial. Une offre payante
+              pourra être introduite plus tard ; tout changement sera communiqué en amont.
+            </p>
+          </details>
+          <details>
+            <summary>Mes fichiers sont-ils envoyés vers un serveur ?</summary>
+            <p>
+              Non. L’indexation et la recherche de fichiers s’effectuent localement sur votre machine.
+              Une recherche web n’est ouverte que lorsque vous la demandez explicitement.
+            </p>
+          </details>
+          <details>
+            <summary>Comment installer la mise à jour suivante ?</summary>
+            <p>
+              Les versions Debian et AppImage vérifient les nouvelles releases et vous demandent avant
+              de redémarrer pour appliquer une mise à jour.
+            </p>
+          </details>
+        </div>
+      </section>
+
+      <section class="final-cta section-shell" aria-labelledby="download-title">
+        <img src="./assets/finder-icon.png" alt="" width="72" height="72" loading="lazy" />
+        <p class="section-label">Prêt quand vous l’êtes</p>
+        <h2 id="download-title">Une touche suffit.</h2>
+        <p>Essayez Finder gratuitement pendant sa bêta.</p>
+        <div class="hero-actions">
+          <a
+            class="button button-primary"
+            href="https://github.com/slayercode1/Utilitaire-Ubuntu/releases/latest"
+            data-download="deb"
+          >
+            Télécharger le .deb
+          </a>
+          <a
+            class="button button-secondary"
+            href="https://github.com/slayercode1/Utilitaire-Ubuntu/releases/latest"
+            data-download="appimage"
+          >
+            Choisir l’AppImage
+          </a>
+        </div>
+        <p class="release-note">Linux x64 · Bêta · Usage personnel gratuit</p>
+      </section>
+    </main>
+
+    <footer class="site-footer">
+      <div class="footer-shell">
+        <div class="footer-brand">
+          <a class="brand" href="#top">
+            <img src="./assets/finder-icon.png" alt="" width="28" height="28" loading="lazy" />
+            <span>Finder</span>
+          </a>
+          <p>Le chemin le plus court entre une intention et une action.</p>
+        </div>
+        <nav aria-label="Liens du pied de page">
+          <div>
+            <p>Produit</p>
+            <a href="#fonctionnalites">Fonctionnalités</a>
+            <a href="#beta">Bêta et tarif</a>
+            <a href="https://github.com/slayercode1/Utilitaire-Ubuntu/releases">Versions</a>
+          </div>
+          <div>
+            <p>Ressources</p>
+            <a href="https://github.com/slayercode1/Utilitaire-Ubuntu">Code source</a>
+            <a href="https://github.com/slayercode1/Utilitaire-Ubuntu/blob/main/README.md">Documentation</a>
+            <a href="https://github.com/slayercode1/Utilitaire-Ubuntu/blob/main/SECURITY.md">Sécurité</a>
+          </div>
+          <div>
+            <p>Communauté</p>
+            <a href="https://github.com/slayercode1/Utilitaire-Ubuntu/issues">Signaler un problème</a>
+            <a href="https://github.com/slayercode1/Utilitaire-Ubuntu/blob/main/CONTRIBUTING.md">Contribuer</a>
+            <a href="mailto:compte.professionel@outlook.com">Contact</a>
+          </div>
+        </nav>
+      </div>
+      <div class="footer-meta">
+        <p>© <span data-year>2026</span> Finder. Tous droits réservés.</p>
+        <p>Conçu pour Linux, avec soin.</p>
+      </div>
+    </footer>
+
+    <noscript>
+      <p class="noscript-note">
+        JavaScript est désactivé. Les téléchargements restent disponibles sur la page des releases
+        GitHub.
+      </p>
+    </noscript>
+    <script src="./script.js" defer></script>
+  </body>
+</html>
