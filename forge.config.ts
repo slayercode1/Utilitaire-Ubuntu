@@ -3,9 +3,17 @@
 import fs from 'node:fs/promises'
 import path from 'node:path'
 
-import { FusesPlugin } from '@electron-forge/plugin-fuses'
-import { FuseV1Options, FuseVersion } from '@electron/fuses'
+import {
+  FuseState,
+  FuseV1Options,
+  FuseVersion,
+  flipFuses,
+  getCurrentFuseWire
+} from '@electron/fuses'
 import type { ForgeConfig } from '@electron-forge/shared-types'
+
+// Les archives et paquets ne doivent pas hériter d'un umask développeur 0002.
+process.umask(0o022)
 
 async function normalizePackageModes(root: string): Promise<void> {
   const entries = await fs.readdir(root, { withFileTypes: true })
@@ -22,6 +30,40 @@ async function normalizePackageModes(root: string): Promise<void> {
       await fs.chmod(target, executable ? 0o755 : 0o644)
     }
   }
+}
+
+const FUSE_CONFIG = {
+  version: FuseVersion.V1,
+  strictlyRequireAllFuses: true,
+  [FuseV1Options.RunAsNode]: false,
+  [FuseV1Options.EnableCookieEncryption]: true,
+  [FuseV1Options.EnableNodeOptionsEnvironmentVariable]: false,
+  [FuseV1Options.EnableNodeCliInspectArguments]: false,
+  [FuseV1Options.EnableEmbeddedAsarIntegrityValidation]: true,
+  [FuseV1Options.OnlyLoadAppFromAsar]: true,
+  // Le paquet ne livre pas de snapshot propre au processus navigateur.
+  [FuseV1Options.LoadBrowserProcessSpecificV8Snapshot]: false,
+  // Le renderer est servi par finder-app://, jamais par file://.
+  [FuseV1Options.GrantFileProtocolExtraPrivileges]: false,
+  // Conserve les garde-pages V8 pour la sûreté mémoire WebAssembly.
+  [FuseV1Options.WasmTrapHandlers]: true
+} as const
+
+async function hardenAndVerifyElectron(executablePath: string): Promise<void> {
+  await flipFuses(executablePath, FUSE_CONFIG)
+
+  const actual = await getCurrentFuseWire(executablePath)
+  for (const [rawOption, expected] of Object.entries(FUSE_CONFIG)) {
+    if (!/^\d+$/.test(rawOption)) continue
+
+    const option = Number(rawOption) as FuseV1Options
+    const expectedState = expected ? FuseState.ENABLE : FuseState.DISABLE
+    if (actual[option] !== expectedState) {
+      throw new Error(`Fuse ${FuseV1Options[option]} incorrecte après packaging`)
+    }
+  }
+
+  console.log('fuses : 9 valeurs explicitement configurées et vérifiées')
 }
 
 const config: ForgeConfig = {
@@ -45,6 +87,9 @@ const config: ForgeConfig = {
 
       const allowed = [
         /^\/dist($|\/)/,
+        // `electron-updater` et ses dépendances de production sont requis par
+        // les paquets Forge ; npm prune retire les dépendances de développement.
+        /^\/node_modules($|\/)/,
         /^\/package\.json$/
       ]
       if (/\.js\.map$/.test(candidate)) return true
@@ -81,36 +126,12 @@ const config: ForgeConfig = {
     }
   ],
 
-  plugins: [
-    new FusesPlugin({
-      version: FuseVersion.V1,
-
-      // Electron 43 expose neuf fuses ; @electron/fuses@1.8 n'en connaît que
-      // huit, et Forge 7 impose cette branche v1 en dépendance de pair. Sans
-      // cette option, l'empaquetage échoue. Le fuse non couvert conserve sa
-      // valeur par défaut ; à réactiver dès que Forge acceptera la v2.
-      strictlyRequireAllFuses: false,
-
-      [FuseV1Options.RunAsNode]: false,
-      [FuseV1Options.EnableCookieEncryption]: true,
-      [FuseV1Options.EnableNodeOptionsEnvironmentVariable]: false,
-      [FuseV1Options.EnableNodeCliInspectArguments]: false,
-      [FuseV1Options.EnableEmbeddedAsarIntegrityValidation]: true,
-      [FuseV1Options.OnlyLoadAppFromAsar]: true,
-      // Activer ce fuse impose de livrer un snapshot V8 propre au processus
-      // principal ; sans ce fichier, Electron s'arrête au démarrage sur
-      // « Error loading V8 startup snapshot file ».
-      [FuseV1Options.LoadBrowserProcessSpecificV8Snapshot]: false,
-      // L'interface est chargée par file:// depuis l'archive asar : sans ces
-      // privilèges, Electron échoue sur ERR_FILE_NOT_FOUND. Le risque reste
-      // contenu — la fenêtre ne charge que ce document local, jamais de
-      // contenu distant, et la navigation est verrouillée par la CSP.
-      [FuseV1Options.GrantFileProtocolExtraPrivileges]: true
-    })
-  ],
-
   hooks: {
     postPackage: async (_config, results): Promise<void> => {
+      if (results.platform !== 'linux') {
+        throw new Error('Le durcissement des fuses est configuré pour Linux')
+      }
+
       const keptLocales = new Set(['fr.pak', 'en-US.pak'])
 
       for (const outputPath of results.outputPaths) {
@@ -131,11 +152,11 @@ const config: ForgeConfig = {
         }
 
         console.log(
-          'locales : ' + removed + ' fichiers retirés, ' +
-            keptLocales.size + ' conservés'
+          'locales : ' + removed + ' fichiers retirés, ' + keptLocales.size + ' conservés'
         )
 
         await normalizePackageModes(outputPath)
+        await hardenAndVerifyElectron(path.join(outputPath, 'finder'))
       }
     }
   }
