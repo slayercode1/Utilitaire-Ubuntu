@@ -6,16 +6,16 @@
  * règle paraît discutable, elle est documentée telle qu'elle est.
  */
 
-import { describe, it, expect, beforeAll, afterAll, vi } from 'vitest'
 import fs from 'node:fs'
 import os from 'node:os'
 import path from 'node:path'
+import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest'
 
 import {
-  validateAndSanitizePath,
-  validateExecCommand,
   parseCommandArguments,
   stripDesktopFieldCodes,
+  validateAndSanitizePath,
+  validateExecCommand,
   validateUserCommand
 } from '../../src/main/services/validation.js'
 
@@ -114,8 +114,9 @@ describe('validateExecCommand', () => {
   it('conserve les codes de champ .desktop (nettoyés plus tard, par argument)', () => {
     // Comportement voulu : le nettoyage a lieu dans stripDesktopFieldCodes,
     // une fois les arguments séparés, pour ne pas laisser de "--" orphelin.
-    expect(validateExecCommand('/snap/bin/discord --url -- %u'))
-      .toBe('/snap/bin/discord --url -- %u')
+    expect(validateExecCommand('/snap/bin/discord --url -- %u')).toBe(
+      '/snap/bin/discord --url -- %u'
+    )
   })
 
   it('supprime les espaces de bordure', () => {
@@ -146,23 +147,19 @@ describe('validateExecCommand', () => {
 
 describe('parseCommandArguments', () => {
   it('sépare les arguments sur les espaces', () => {
-    expect(parseCommandArguments('firefox --new-window'))
-      .toEqual(['firefox', '--new-window'])
+    expect(parseCommandArguments('firefox --new-window')).toEqual(['firefox', '--new-window'])
   })
 
   it('préserve les segments entre guillemets', () => {
-    expect(parseCommandArguments('app "mon fichier.txt"'))
-      .toEqual(['app', 'mon fichier.txt'])
+    expect(parseCommandArguments('app "mon fichier.txt"')).toEqual(['app', 'mon fichier.txt'])
   })
 
   it('accepte les apostrophes comme délimiteur', () => {
-    expect(parseCommandArguments("app 'mon fichier.txt'"))
-      .toEqual(['app', 'mon fichier.txt'])
+    expect(parseCommandArguments("app 'mon fichier.txt'")).toEqual(['app', 'mon fichier.txt'])
   })
 
   it('gère les guillemets échappés', () => {
-    expect(parseCommandArguments('app "un \\"mot\\" cité"'))
-      .toEqual(['app', 'un "mot" cité'])
+    expect(parseCommandArguments('app "un \\"mot\\" cité"')).toEqual(['app', 'un "mot" cité'])
   })
 
   it('ignore les espaces multiples', () => {
@@ -182,13 +179,14 @@ describe('stripDesktopFieldCodes', () => {
 
   it('retire le "--" devenu orphelin (cas Discord)', () => {
     // Régression : sans cela, Discord reçoit "--url --" et ne démarre pas
-    expect(stripDesktopFieldCodes(['/snap/bin/discord', '--url', '--', '%u']))
-      .toEqual(['/snap/bin/discord', '--url'])
+    expect(stripDesktopFieldCodes(['/snap/bin/discord', '--url', '--', '%u'])).toEqual([
+      '/snap/bin/discord',
+      '--url'
+    ])
   })
 
-  it('supprime un préfixe d\'option vidé de sa valeur', () => {
-    expect(stripDesktopFieldCodes(['app', '--file=%f', '--autre']))
-      .toEqual(['app', '--autre'])
+  it("supprime un préfixe d'option vidé de sa valeur", () => {
+    expect(stripDesktopFieldCodes(['app', '--file=%f', '--autre'])).toEqual(['app', '--autre'])
   })
 
   it('convertit %% en pourcentage littéral', () => {
@@ -196,8 +194,10 @@ describe('stripDesktopFieldCodes', () => {
   })
 
   it('laisse intacte une commande sans code de champ', () => {
-    expect(stripDesktopFieldCodes(['nautilus', '--new-window']))
-      .toEqual(['nautilus', '--new-window'])
+    expect(stripDesktopFieldCodes(['nautilus', '--new-window'])).toEqual([
+      'nautilus',
+      '--new-window'
+    ])
   })
 
   it('conserve un % isolé qui ne forme pas un code connu', () => {

@@ -5,10 +5,10 @@
  * vérifiées sur un répertoire temporaire, jamais sur des données réelles.
  */
 
-import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 import fs from 'node:fs'
 import os from 'node:os'
 import path from 'node:path'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 /** Répertoire jouant le rôle de `userData` pendant les tests. */
 let userData: string
@@ -24,9 +24,7 @@ vi.mock('electron', () => ({
   }
 }))
 
-const { purgeUnusedArtifacts, eraseLocalData } = await import(
-  '../../src/main/services/privacy.js'
-)
+const { purgeUnusedArtifacts, eraseLocalData } = await import('../../src/main/services/privacy.js')
 
 beforeEach(() => {
   userData = fs.mkdtempSync(path.join(os.tmpdir(), 'finder-privacy-'))
@@ -44,7 +42,7 @@ function creerFichier(relatif: string, contenu = 'x'): void {
 }
 
 describe('purgeUnusedArtifacts', () => {
-  it('retire l\'identifiant persistant du poste', () => {
+  it("retire l'identifiant persistant du poste", () => {
     // Crashpad génère un identifiant unique par installation : sans serveur de
     // collecte, il est créé sans finalité.
     creerFichier('Crashpad/client_id', '0123456789abcdef')
@@ -62,7 +60,7 @@ describe('purgeUnusedArtifacts', () => {
     expect(fs.existsSync(path.join(userData, 'DIPS'))).toBe(false)
   })
 
-  it('retourne le nombre d\'artefacts effectivement retirés', () => {
+  it("retourne le nombre d'artefacts effectivement retirés", () => {
     creerFichier('Crashpad/client_id')
     creerFichier('DIPS')
 
@@ -79,13 +77,13 @@ describe('purgeUnusedArtifacts', () => {
     expect(fs.existsSync(path.join(userData, 'Local Storage'))).toBe(true)
   })
 
-  it('ne signale rien quand il n\'y a rien à retirer', () => {
+  it("ne signale rien quand il n'y a rien à retirer", () => {
     expect(purgeUnusedArtifacts()).toBe(0)
   })
 })
 
 describe('eraseLocalData', () => {
-  it('efface le stockage contenant l\'historique de recherche', () => {
+  it("efface le stockage contenant l'historique de recherche", () => {
     creerFichier('Local Storage/leveldb/000003.log', 'finderHistory')
 
     eraseLocalData()
@@ -124,7 +122,7 @@ describe('eraseLocalData', () => {
     expect(efface).toContain('Cache')
   })
 
-  it('retourne une liste vide si rien n\'est stocké', () => {
+  it("retourne une liste vide si rien n'est stocké", () => {
     expect(eraseLocalData()).toEqual([])
   })
 })

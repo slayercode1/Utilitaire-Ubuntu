@@ -5,16 +5,16 @@
  * handler IPC : il aurait fallu lancer Electron pour l'atteindre.
  */
 
-import { describe, it, expect, beforeEach, afterEach } from 'vitest'
 import fs from 'node:fs'
 import os from 'node:os'
 import path from 'node:path'
+import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 
 import {
   buildScriptContent,
-  writeCommandScript,
   removeCommandScript,
-  scheduleCleanup
+  scheduleCleanup,
+  writeCommandScript
 } from '../../src/main/services/terminal-command.js'
 
 /** Répertoire isolé, pour ne pas polluer /tmp pendant les tests. */

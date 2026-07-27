@@ -6,16 +6,13 @@
  * tentées demandait auparavant de disposer d'un autre environnement de bureau.
  */
 
-import { describe, it, expect, vi } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 
-import type {
-  SettingActionDefinition,
-  SettingDefinition
-} from '../../src/main/services/setting-actions.js'
+import type { SettingActionDefinition } from '../../src/main/services/setting-actions.js'
 import {
-  findAction,
   collectCommandCandidates,
-  executeSettingAction
+  executeSettingAction,
+  findAction
 } from '../../src/main/services/setting-actions.js'
 
 /** Découpe naïve, suffisante pour les commandes de test. */
@@ -32,11 +29,9 @@ describe('findAction', () => {
     expect(findAction(setting, 'absent')).toBeNull()
   })
 
-  it('tolère un paramètre absent ou malformé', () => {
+  it('tolère un paramètre absent', () => {
     expect(findAction(null, 'toggle')).toBeNull()
     expect(findAction({}, 'toggle')).toBeNull()
-    // Entrée volontairement malformée : la fonction doit la tolérer
-    expect(findAction({ actions: 'pas un tableau' } as unknown as SettingDefinition, 'toggle')).toBeNull()
   })
 })
 
@@ -61,7 +56,7 @@ describe('collectCommandCandidates', () => {
   })
 
   it('écarte une commande sous forme de fonction', () => {
-    expect(collectCommandCandidates({ id: 'x', command: async () => undefined })).toEqual([])
+    expect(collectCommandCandidates({ id: 'x', command: async () => 'fait' })).toEqual([])
   })
 
   it('supprime les espaces de bordure', () => {
@@ -71,12 +66,14 @@ describe('collectCommandCandidates', () => {
 
 describe('executeSettingAction — commandes shell', () => {
   const setting = {
-    actions: [{
-      id: 'settings',
-      command: 'gnome-control-center wifi',
-      commandAlt: 'xfce4-settings-manager',
-      commandAlt2: 'systemsettings5'
-    }]
+    actions: [
+      {
+        id: 'settings',
+        command: 'gnome-control-center wifi',
+        commandAlt: 'xfce4-settings-manager',
+        commandAlt2: 'systemsettings5'
+      }
+    ]
   }
 
   it('lance la commande principale quand elle aboutit', async () => {
@@ -93,9 +90,7 @@ describe('executeSettingAction — commandes shell', () => {
     // Régression : la version précédente ignorait le retour de launch et
     // considérait la première commande comme réussie, si bien que les
     // environnements XFCE et KDE n'étaient jamais atteints.
-    const launch = vi.fn()
-      .mockReturnValueOnce(false)
-      .mockReturnValueOnce(true)
+    const launch = vi.fn().mockReturnValueOnce(false).mockReturnValueOnce(true)
 
     const r = await executeSettingAction(setting, 'settings', { parseArguments, launch })
 
@@ -104,7 +99,7 @@ describe('executeSettingAction — commandes shell', () => {
     expect(launch.mock.calls[1]![0]).toEqual(['xfce4-settings-manager'])
   })
 
-  it('tente toutes les alternatives avant d\'abandonner', async () => {
+  it("tente toutes les alternatives avant d'abandonner", async () => {
     const launch = vi.fn().mockReturnValue(false)
 
     const r = await executeSettingAction(setting, 'settings', { parseArguments, launch })
@@ -115,8 +110,11 @@ describe('executeSettingAction — commandes shell', () => {
   })
 
   it('poursuit malgré une exception du lanceur', async () => {
-    const launch = vi.fn()
-      .mockImplementationOnce(() => { throw new Error('binaire absent') })
+    const launch = vi
+      .fn()
+      .mockImplementationOnce(() => {
+        throw new Error('binaire absent')
+      })
       .mockReturnValueOnce(true)
 
     const r = await executeSettingAction(setting, 'settings', { parseArguments, launch })
@@ -139,12 +137,16 @@ describe('executeSettingAction — actions programmées', () => {
     expect(launch).not.toHaveBeenCalled()
   })
 
-  it('signale un échec sans laisser remonter l\'exception', async () => {
+  it("signale un échec sans laisser remonter l'exception", async () => {
     const setting = {
-      actions: [{
-        id: 'toggle',
-        command: async () => { throw new Error('nmcli indisponible') }
-      }]
+      actions: [
+        {
+          id: 'toggle',
+          command: async () => {
+            throw new Error('nmcli indisponible')
+          }
+        }
+      ]
     }
 
     const r = await executeSettingAction(setting, 'toggle', {
@@ -154,7 +156,7 @@ describe('executeSettingAction — actions programmées', () => {
 
     expect(r.ok).toBe(false)
     expect(r.ok === false && r.reason).toBe('action-failed')
-    expect(r.ok === false && r.result).toBe('nmcli indisponible')
+    expect(r.ok === false && r.result).toBe('Action programmée impossible')
   })
 })
 

@@ -6,7 +6,7 @@
  * de vie de l'application, qui reste résidente en arrière-plan.
  */
 
-import { describe, it, expect } from 'vitest'
+import { describe, expect, it } from 'vitest'
 
 import { BoundedCache } from '../../src/main/services/bounded-cache.js'
 
@@ -24,7 +24,7 @@ describe('BoundedCache — comportement de base', () => {
     expect(cache.get('absent')).toBeUndefined()
   })
 
-  it('distingue une valeur nulle d\'une absence', () => {
+  it("distingue une valeur nulle d'une absence", () => {
     // findIcon mémorise null pour les icônes introuvables : cette distinction
     // évite de relancer une recherche coûteuse à chaque appel.
     const cache = new BoundedCache<string, string | null>(3)
@@ -60,7 +60,7 @@ describe('BoundedCache — éviction', () => {
     expect(cache.size).toBe(3)
   })
 
-  it('évince l\'entrée la moins récemment utilisée', () => {
+  it("évince l'entrée la moins récemment utilisée", () => {
     const cache = new BoundedCache<string, number>(3)
     cache.set('a', 1)
     cache.set('b', 2)
@@ -71,7 +71,7 @@ describe('BoundedCache — éviction', () => {
     expect(cache.has('d')).toBe(true)
   })
 
-  it('une lecture protège une entrée de l\'éviction', () => {
+  it("une lecture protège une entrée de l'éviction", () => {
     const cache = new BoundedCache<string, number>(3)
     cache.set('a', 1)
     cache.set('b', 2)
@@ -85,7 +85,7 @@ describe('BoundedCache — éviction', () => {
     expect(cache.has('b')).toBe(false)
   })
 
-  it('has ne modifie pas l\'ancienneté', () => {
+  it("has ne modifie pas l'ancienneté", () => {
     const cache = new BoundedCache<string, number>(2)
     cache.set('a', 1)
     cache.set('b', 2)

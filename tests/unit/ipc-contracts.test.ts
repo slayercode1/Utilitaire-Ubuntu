@@ -9,25 +9,22 @@
  * Un canal ajouté d'un seul côté fait échouer ce test.
  */
 
-import { describe, it, expect } from 'vitest'
 import fs from 'node:fs'
 import path from 'node:path'
+import { describe, expect, it } from 'vitest'
 
-import {
-  IPC_CHANNELS,
-  REQUEST_CHANNELS,
-  COMMAND_CHANNELS
-} from '../../src/shared/ipc-contracts.js'
+import { COMMAND_CHANNELS, IPC_CHANNELS, REQUEST_CHANNELS } from '../../src/shared/ipc-contracts.js'
 
 // Vitest exécute depuis la racine du projet ; pas besoin de import.meta.url,
 // qui serait incompatible avec la vérification en mode CommonJS.
 const racine = process.cwd()
 
-const lire = (nom: string): string =>
-  fs.readFileSync(path.join(racine, nom), 'utf8')
+const lire = (nom: string): string => fs.readFileSync(path.join(racine, nom), 'utf8')
 
 const sourcePreload = lire('src/preload/index.ts')
 const sourceMain = lire('src/main/ipc/register-handlers.ts')
+const sourceWindow = lire('src/main/window.ts')
+const sourceSenderSecurity = lire('src/main/ipc/sender-security.ts')
 
 /** Extrait les canaux d'un source via une expression donnée. */
 function extraire(source: string, motif: RegExp): Set<string> {
@@ -44,8 +41,7 @@ describe('déclaration des canaux', () => {
   })
 
   it('regroupe tous les canaux dans IPC_CHANNELS', () => {
-    const total = Object.keys(REQUEST_CHANNELS).length +
-      Object.keys(COMMAND_CHANNELS).length
+    const total = Object.keys(REQUEST_CHANNELS).length + Object.keys(COMMAND_CHANNELS).length
 
     expect(Object.keys(IPC_CHANNELS)).toHaveLength(total)
   })
@@ -79,10 +75,8 @@ describe('cohérence preload ↔ contrats', () => {
 describe('cohérence main ↔ contrats', () => {
   // Le processus principal référence les constantes plutôt que des littéraux ;
   // on retrouve donc le canal via le nom de la clé.
-  const resoudre = (
-    cles: string[],
-    source: Record<string, string>
-  ): Set<string> => new Set(cles.map((cle) => source[cle]).filter(Boolean) as string[])
+  const resoudre = (cles: string[], source: Record<string, string>): Set<string> =>
+    new Set(cles.map((cle) => source[cle]).filter(Boolean) as string[])
 
   const handleMain = resoudre(
     [...sourceMain.matchAll(/ipcMain\.handle\(\s*REQUEST_CHANNELS\.(\w+)/g)].map((m) => m[1]!),
@@ -102,20 +96,20 @@ describe('cohérence main ↔ contrats', () => {
     expect([...onMain].sort()).toEqual(Object.values(COMMAND_CHANNELS).sort())
   })
 
-  it('n\'utilise aucun nom de canal en dur', () => {
+  it("n'utilise aucun nom de canal en dur", () => {
     // Un littéral échapperait à la vérification de cohérence ci-dessus
     const litteraux = [...sourceMain.matchAll(/ipcMain\.(?:on|handle)\(\s*'([^']+)'/g)]
     expect(litteraux.map((m) => m[1])).toEqual([])
   })
 
-  it('aucun canal n\'est traité deux fois', () => {
+  it("aucun canal n'est traité deux fois", () => {
     const tous = [...handleMain, ...onMain]
     expect(new Set(tous).size).toBe(tous.length)
   })
 })
 
 describe('surface exposée au renderer', () => {
-  it('n\'expose pas ipcRenderer directement', () => {
+  it("n'expose pas ipcRenderer directement", () => {
     // exposeInMainWorld ne doit recevoir que des fonctions nommées, jamais
     // l'objet ipcRenderer, qui donnerait accès à tous les canaux.
     expect(sourcePreload).not.toMatch(/exposeInMainWorld\([^)]*ipcRenderer\s*[,)]/)
@@ -135,6 +129,16 @@ describe('surface exposée au renderer', () => {
   it('ne reçoit jamais une commande Exec arbitraire pour lancer une application', () => {
     expect(sourcePreload).toContain("ipcRenderer.send('launch-app', desktopFilePath)")
     expect(sourceMain).toContain('entry.path === desktopFilePath')
-    expect(sourceMain).not.toMatch(/LAUNCH_APP[^]*execCommand: unknown/)
+    // biome-ignore lint/correctness/noEmptyCharacterClassInRegex: [^] couvre volontairement les sauts de ligne
+    expect(sourceMain).not.toMatch(/LAUNCH_APP[^]*execCommand:/)
+  })
+})
+
+describe('origine du renderer', () => {
+  it('ne charge plus le document principal avec file://', () => {
+    expect(sourceWindow).toContain('loadURL(APP_RENDERER_URL)')
+    expect(sourceWindow).not.toContain('loadFile(')
+    expect(sourceSenderSecurity).toContain('APP_RENDERER_URL')
+    expect(sourceSenderSecurity).not.toContain('pathToFileURL')
   })
 })

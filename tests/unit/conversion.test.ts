@@ -6,12 +6,12 @@
  * décrivent le comportement existant, pour que l'extraction le préserve.
  */
 
-import { describe, it, expect } from 'vitest'
+import { describe, expect, it } from 'vitest'
 
 import { tryConversion } from '../../src/renderer/features/conversion/convert-units.js'
 import {
-  isMathExpression,
-  evaluateMath
+  evaluateMath,
+  isMathExpression
 } from '../../src/renderer/features/conversion/evaluate-math.js'
 
 describe('tryConversion — longueurs', () => {
@@ -109,7 +109,7 @@ describe('evaluateMath', () => {
     expect(evaluateMath('-5+10')).toBe(5)
   })
 
-  it('n\'utilise pas eval : une expression invalide ne s\'exécute pas', () => {
+  it("n'utilise pas eval : une expression invalide ne s'exécute pas", () => {
     // Une chaîne de code arbitraire ne doit produire aucun effet
     const resultat = evaluateMath('process.exit(1)')
     expect(resultat === null || Number.isNaN(resultat)).toBe(true)
