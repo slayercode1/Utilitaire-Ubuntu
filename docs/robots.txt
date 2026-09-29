@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://slayercode1.github.io/Utilitaire-Ubuntu/sitemap.xml

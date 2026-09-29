@@ -5,25 +5,60 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta
       name="description"
-      content="Finder est le lanceur rapide et discret pour Linux. Recherchez vos applications et fichiers, calculez et convertissez sans quitter le clavier."
+      content="Finder est un lanceur rapide type Spotlight pour Linux (Ubuntu, Debian). Recherchez applications et fichiers, calculez, convertissez des unités et lancez des commandes depuis un seul raccourci clavier. Gratuit pour un usage personnel."
     />
     <meta name="theme-color" content="#f7f7f5" />
     <meta name="color-scheme" content="light" />
+    <link rel="canonical" href="https://slayercode1.github.io/Utilitaire-Ubuntu/" />
     <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="Finder" />
+    <meta property="og:locale" content="fr_FR" />
+    <meta property="og:url" content="https://slayercode1.github.io/Utilitaire-Ubuntu/" />
     <meta property="og:title" content="Finder — Tout Linux, à une touche" />
     <meta
       property="og:description"
-      content="Un lanceur rapide, sobre et pensé pour Linux. Bêta disponible gratuitement."
+      content="Un lanceur rapide type Spotlight, sobre et pensé pour Linux. Gratuit pour un usage personnel."
     />
-    <meta property="og:image" content="./assets/finder-preview.png" />
+    <meta
+      property="og:image"
+      content="https://slayercode1.github.io/Utilitaire-Ubuntu/assets/finder-preview.png"
+    />
     <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="Finder — Tout Linux, à une touche" />
+    <meta
+      name="twitter:description"
+      content="Un lanceur rapide type Spotlight, sobre et pensé pour Linux. Gratuit pour un usage personnel."
+    />
+    <meta
+      name="twitter:image"
+      content="https://slayercode1.github.io/Utilitaire-Ubuntu/assets/finder-preview.png"
+    />
     <meta
       http-equiv="Content-Security-Policy"
       content="default-src 'self'; img-src 'self' data:; style-src 'self'; script-src 'self'; connect-src https://api.github.com; object-src 'none'; base-uri 'self'; form-action 'none'; upgrade-insecure-requests"
     />
     <link rel="icon" type="image/png" href="./assets/finder-icon.png" />
     <link rel="stylesheet" href="./styles.css" />
-    <title>Finder — Lanceur rapide pour Linux</title>
+    <title>Finder — Lanceur rapide type Spotlight pour Linux</title>
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@type": "SoftwareApplication",
+        "name": "Finder",
+        "operatingSystem": "Linux",
+        "applicationCategory": "UtilitiesApplication",
+        "description": "Lanceur rapide type Spotlight pour Linux : recherche d'applications et de fichiers, calculs, conversions d'unités et commandes depuis un raccourci clavier.",
+        "inLanguage": "fr",
+        "url": "https://slayercode1.github.io/Utilitaire-Ubuntu/",
+        "image": "https://slayercode1.github.io/Utilitaire-Ubuntu/assets/finder-preview.png",
+        "downloadUrl": "https://github.com/slayercode1/Utilitaire-Ubuntu/releases/latest",
+        "offers": {
+          "@type": "Offer",
+          "price": "0",
+          "priceCurrency": "EUR"
+        }
+      }
+    </script>
   </head>
   <body>
     <a class="skip-link" href="#contenu">Aller au contenu</a>
@@ -33,7 +68,6 @@
         <a class="brand" href="#top" aria-label="Finder, accueil">
           <img src="./assets/finder-icon.png" alt="" width="28" height="28" />
           <span>Finder</span>
-          <span class="beta-tag">Bêta</span>
         </a>
 
         <button
@@ -50,7 +84,7 @@
 
         <nav id="main-navigation" class="main-nav" aria-label="Navigation principale" data-menu>
           <a href="#fonctionnalites">Fonctionnalités</a>
-          <a href="#beta">La bêta</a>
+          <a href="#tarif">Tarif</a>
           <a href="#questions">Questions</a>
           <a
             class="nav-download"
@@ -93,7 +127,7 @@
           </div>
           <p class="release-note">
             <span class="status-dot" aria-hidden="true"></span>
-            Bêta gratuite · Linux x64 · <span data-release-label>Dernière version</span>
+            Gratuit · Linux x64 · <span data-release-label>Dernière version</span>
           </p>
         </div>
 
@@ -276,16 +310,16 @@
         </div>
       </section>
 
-      <section class="beta section-shell" id="beta" aria-labelledby="beta-title">
+      <section class="beta section-shell" id="tarif" aria-labelledby="beta-title">
         <div class="beta-panel reveal">
           <div>
-            <p class="section-label">Une bêta, en toute transparence</p>
+            <p class="section-label">Un modèle transparent</p>
             <h2 id="beta-title">Gratuit aujourd’hui.<br />Clair pour demain.</h2>
           </div>
           <div class="beta-copy">
             <p>
-              Finder est actuellement proposé gratuitement en version bêta. Le produit évolue encore
-              et vos retours contribuent directement à ses priorités.
+              Finder est gratuit pour un usage personnel. Le produit évolue régulièrement et vos
+              retours contribuent directement à ses priorités.
             </p>
             <p>
               À l’avenir, certaines fonctionnalités ou certains usages pourraient intégrer une offre
@@ -316,8 +350,16 @@
           <details>
             <summary>Finder est-il vraiment gratuit ?</summary>
             <p>
-              Oui, la bêta est gratuite pour un usage personnel et non commercial. Une offre payante
+              Oui, Finder est gratuit pour un usage personnel et non commercial. Une offre payante
               pourra être introduite plus tard ; tout changement sera communiqué en amont.
+            </p>
+          </details>
+          <details>
+            <summary>Existe-t-il un équivalent de Spotlight sur Linux ?</summary>
+            <p>
+              Oui : Finder apporte à Linux une recherche universelle comparable à Spotlight sur
+              macOS — applications, fichiers, calculs et conversions derrière un seul raccourci
+              clavier, Alt+Espace.
             </p>
           </details>
           <details>
@@ -341,7 +383,7 @@
         <img src="./assets/finder-icon.png" alt="" width="72" height="72" loading="lazy" />
         <p class="section-label">Prêt quand vous l’êtes</p>
         <h2 id="download-title">Une touche suffit.</h2>
-        <p>Essayez Finder gratuitement pendant sa bêta.</p>
+        <p>Essayez Finder gratuitement dès maintenant.</p>
         <div class="hero-actions">
           <a
             class="button button-primary"
@@ -358,7 +400,7 @@
             Choisir l’AppImage
           </a>
         </div>
-        <p class="release-note">Linux x64 · Bêta · Usage personnel gratuit</p>
+        <p class="release-note">Linux x64 · Usage personnel gratuit</p>
       </section>
     </main>
 
@@ -375,7 +417,7 @@
           <div>
             <p>Produit</p>
             <a href="#fonctionnalites">Fonctionnalités</a>
-            <a href="#beta">Bêta et tarif</a>
+            <a href="#tarif">Tarif</a>
             <a href="https://github.com/slayercode1/Utilitaire-Ubuntu/releases">Versions</a>
           </div>
           <div>

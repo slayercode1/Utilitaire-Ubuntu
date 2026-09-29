@@ -129,17 +129,6 @@ svg {
   border-radius: 7px;
 }
 
-.beta-tag {
-  padding: 2px 7px;
-  border-radius: 999px;
-  background: #e8eae6;
-  color: var(--muted);
-  font-size: 10px;
-  font-weight: 650;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-}
-
 .main-nav {
   display: flex;
   align-items: center;
