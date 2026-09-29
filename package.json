@@ -139,6 +139,7 @@
     },
     "deb": {
       "afterInstall": "postinst.sh",
+      "afterRemove": "postrm.sh",
       "packageCategory": "utils",
       "priority": "optional"
     },
