@@ -27,9 +27,8 @@
     "typecheck": "tsc --noEmit && tsc --noEmit -p tsconfig.renderer.json && tsc --noEmit -p tsconfig.tests.json",
     "verify": "npm run typecheck && npm run test && npm run build",
     "check:strict-types": "tsc -p tsconfig.scripts.json && node dist-scripts/check-strict-types.js",
-    "start": "npm run build && electron-forge start",
-    "package": "npm run build && electron-forge package",
-    "make": "npm run build && electron-forge make",
+    "start": "npm run build && electron .",
+    "package": "npm run build && electron-builder --linux --dir",
     "dist:linux": "npm run build && electron-builder --linux",
     "release:linux": "npm run build && electron-builder --linux AppImage deb --publish never",
     "build": "tsc && tsc -p tsconfig.renderer.json && tsc -p tsconfig.scripts.json && node dist-scripts/check-strict-types.js && node dist-scripts/copy-assets.js"
@@ -49,9 +48,6 @@
     "@biomejs/biome": "^2.5.14",
     "@commitlint/cli": "^21.2.3",
     "@commitlint/config-conventional": "^21.2.3",
-    "@electron-forge/cli": "^7.11.2",
-    "@electron-forge/maker-deb": "^7.11.2",
-    "@electron-forge/maker-zip": "^7.11.2",
     "@electron/fuses": "^2.1.3",
     "@playwright/test": "^1.63.0",
     "@types/node": "^26.6.3",
@@ -157,6 +153,7 @@
     }
   },
   "dependencies": {
-    "electron-updater": "6.8.9"
+    "electron-updater": "6.8.9",
+    "sigstore": "5.0.0"
   }
 }

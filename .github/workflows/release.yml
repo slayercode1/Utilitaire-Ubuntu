@@ -4,6 +4,14 @@ on:
   push:
     branches:
       - main
+    # Chaque release déclenche l'auto-update et propose un redémarrage à tous
+    # les utilisateurs : un push qui ne touche que le site ou la documentation
+    # ne doit pas en publier une.
+    paths-ignore:
+      - 'docs/**'
+      - '**/*.md'
+      - '.github/workflows/pages.yml'
+      - '.github/workflows/ci.yml'
 
 concurrency:
   group: release-main

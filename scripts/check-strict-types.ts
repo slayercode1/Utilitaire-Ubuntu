@@ -5,7 +5,7 @@ import path from 'node:path'
 
 const PROJECT_ROOT = path.resolve(__dirname, '..')
 const SOURCE_ROOTS = ['src', 'tests', 'scripts'] as const
-const ROOT_FILES = ['forge.config.ts', 'playwright.config.ts', 'vitest.config.ts'] as const
+const ROOT_FILES = ['playwright.config.ts', 'vitest.config.ts'] as const
 
 const blockedWords = ['a' + 'ny', 'un' + 'known']
 const catchBindingPattern = /\bcatch\s*\([^)]*\)\s*\{/

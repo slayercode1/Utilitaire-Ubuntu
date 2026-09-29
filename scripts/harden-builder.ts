@@ -41,6 +41,8 @@ async function hardenBuilder(context: AfterPackContext): Promise<void> {
       throw new Error(`Fuse ${FuseV1Options[option]} incorrecte après build`)
     }
   }
+
+  console.log('fuses : 9 valeurs explicitement configurées et vérifiées')
 }
 
 export = hardenBuilder
