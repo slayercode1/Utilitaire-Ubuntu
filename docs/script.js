@@ -7,22 +7,42 @@ const menuButton = document.querySelector('[data-menu-button]')
 const menu = document.querySelector('[data-menu]')
 const header = document.querySelector('[data-header]')
 
-function closeMenu() {
+const menuLabel = document.querySelector('[data-menu-label]')
+
+function setMenuOpen(open) {
   if (!menuButton || !menu) return
-  menuButton.setAttribute('aria-expanded', 'false')
-  menu.classList.remove('is-open')
-  document.body.classList.remove('menu-open')
+  menuButton.setAttribute('aria-expanded', String(open))
+  if (menuLabel) menuLabel.textContent = open ? 'Fermer le menu' : 'Ouvrir le menu'
+  menu.classList.toggle('is-open', open)
+  document.body.classList.toggle('menu-open', open)
+}
+
+function isMenuOpen() {
+  return menuButton?.getAttribute('aria-expanded') === 'true'
 }
 
 menuButton?.addEventListener('click', () => {
-  const shouldOpen = menuButton.getAttribute('aria-expanded') !== 'true'
-  menuButton.setAttribute('aria-expanded', String(shouldOpen))
-  menu?.classList.toggle('is-open', shouldOpen)
-  document.body.classList.toggle('menu-open', shouldOpen)
+  const shouldOpen = !isMenuOpen()
+  setMenuOpen(shouldOpen)
+  // À l'ouverture, le premier lien reçoit le focus pour enchaîner au clavier
+  if (shouldOpen) menu?.querySelector('a')?.focus({ preventScroll: true })
 })
 
 menu?.querySelectorAll('a').forEach((link) => {
-  link.addEventListener('click', closeMenu)
+  link.addEventListener('click', () => setMenuOpen(false))
+})
+
+// Échap ferme le menu et rend le focus au bouton qui l'a ouvert
+document.addEventListener('keydown', (event) => {
+  if (event.key !== 'Escape' || !isMenuOpen()) return
+  setMenuOpen(false)
+  menuButton?.focus()
+})
+
+// Passé au format desktop, la navigation redevient visible en ligne :
+// un menu resté ouvert bloquerait le défilement de la page.
+window.matchMedia('(min-width: 641px)').addEventListener('change', (event) => {
+  if (event.matches) setMenuOpen(false)
 })
 
 window.addEventListener(

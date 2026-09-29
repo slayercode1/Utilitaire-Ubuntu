@@ -3,8 +3,9 @@
   --surface: #ffffff;
   --surface-soft: #f0f1ee;
   --ink: #171918;
-  --muted: #656966;
-  --faint: #929793;
+  --muted: #5f635f;
+  /* Plus clair que --muted mais toujours ≥ 4.5:1 sur --bg (WCAG AA) */
+  --faint: #6b6f6c;
   --line: rgba(23, 25, 24, 0.1);
   --accent: #1769e0;
   --accent-hover: #0d57bf;
@@ -12,8 +13,23 @@
   --radius-sm: 8px;
   --radius-md: 14px;
   --radius-lg: 22px;
-  --shell: min(1120px, calc(100vw - 48px));
   --ease: cubic-bezier(0.22, 1, 0.36, 1);
+
+  /* Mise en page fluide : la gouttière et le rythme vertical suivent la
+     largeur de l'écran, le contenu ne dépasse jamais 1120px. */
+  --gutter: clamp(16px, 5vw, 48px);
+  --shell: min(1120px, 100% - 2 * var(--gutter));
+  --section-space: clamp(80px, 10vw + 40px, 152px);
+  --header-height: 72px;
+
+  /* Échelle typographique : rien de lisible sous 12px */
+  --text-xs: 0.8125rem;
+  --text-sm: 0.9375rem;
+  --text-base: 1rem;
+  --text-lg: clamp(1.0625rem, 1rem + 0.4vw, 1.25rem);
+
+  /* Zone tactile minimale recommandée (Apple HIG / WCAG 2.5.5) */
+  --tap: 44px;
 }
 
 * {
@@ -22,7 +38,7 @@
 
 html {
   scroll-behavior: smooth;
-  scroll-padding-top: 96px;
+  scroll-padding-top: calc(var(--header-height) + 24px);
 }
 
 body {
@@ -30,8 +46,9 @@ body {
   background: var(--bg);
   color: var(--ink);
   font-family: Inter, ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-  font-size: 16px;
+  font-size: var(--text-base);
   line-height: 1.6;
+  overflow-wrap: break-word;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
 }
@@ -77,7 +94,7 @@ svg {
   z-index: 100;
   top: 12px;
   left: 12px;
-  padding: 8px 12px;
+  padding: 12px 16px;
   border-radius: var(--radius-sm);
   background: var(--ink);
   color: white;
@@ -109,7 +126,7 @@ svg {
 
 .nav-shell {
   width: var(--shell);
-  height: 72px;
+  height: var(--header-height);
   margin: 0 auto;
   display: flex;
   align-items: center;
@@ -117,10 +134,11 @@ svg {
 }
 
 .brand {
+  min-height: var(--tap);
   display: inline-flex;
   align-items: center;
   gap: 10px;
-  font-size: 15px;
+  font-size: var(--text-sm);
   font-weight: 650;
   letter-spacing: -0.01em;
 }
@@ -132,14 +150,20 @@ svg {
 .main-nav {
   display: flex;
   align-items: center;
-  gap: 30px;
+  gap: clamp(20px, 3vw, 30px);
   color: var(--muted);
-  font-size: 13px;
+  font-size: 0.875rem;
   font-weight: 500;
 }
 
 .main-nav a {
+  /* Zone cliquable plus haute que le texte, sans décaler la ligne */
+  padding-block: 10px;
   transition: color 180ms ease-out;
+}
+
+.main-nav a:active {
+  color: var(--ink);
 }
 
 .main-nav a:hover,
@@ -148,7 +172,7 @@ svg {
 }
 
 .main-nav .nav-download {
-  padding: 8px 14px;
+  padding: 9px 16px;
   border-radius: 8px;
   background: var(--ink);
   color: white;
@@ -160,7 +184,8 @@ svg {
   color: white;
 }
 
-.menu-button {
+.menu-button,
+.header-cta {
   display: none;
 }
 
@@ -183,7 +208,7 @@ svg {
 .section-label {
   margin: 0 0 18px;
   color: var(--accent);
-  font-size: 12px;
+  font-size: 0.75rem;
   font-weight: 680;
   letter-spacing: 0.12em;
   line-height: 1.4;
@@ -215,7 +240,7 @@ h1 {
   max-width: 650px;
   margin: 0 auto 34px;
   color: var(--muted);
-  font-size: clamp(1.05rem, 2vw, 1.25rem);
+  font-size: var(--text-lg);
   line-height: 1.55;
   text-wrap: balance;
 }
@@ -236,7 +261,7 @@ h1 {
   justify-content: center;
   gap: 9px;
   border-radius: 9px;
-  font-size: 14px;
+  font-size: var(--text-sm);
   font-weight: 600;
   transition:
     color 180ms ease-out,
@@ -244,8 +269,14 @@ h1 {
     transform 180ms ease-out;
 }
 
-.button:hover {
-  transform: translateY(-1px);
+/* Pression : retour immédiat, utile surtout au doigt où le survol n'existe pas */
+.button:active {
+  transform: scale(0.98);
+}
+
+.button[aria-disabled="true"] {
+  opacity: 0.5;
+  pointer-events: none;
 }
 
 .button svg {
@@ -280,7 +311,7 @@ h1 {
 .release-note {
   margin: 18px 0 0;
   color: var(--faint);
-  font-size: 12px;
+  font-size: var(--text-xs);
 }
 
 .status-dot {
@@ -309,16 +340,6 @@ kbd {
   font-family: inherit;
   font-size: 10px;
   line-height: 1;
-}
-
-.stage-toolbar kbd {
-  padding: 5px 7px;
-}
-
-.stage-toolbar b {
-  color: var(--faint);
-  font-size: 10px;
-  font-weight: 400;
 }
 
 .motion-demo {
@@ -547,12 +568,13 @@ kbd {
 }
 
 .scroll-cue {
-  margin-top: 36px;
+  min-height: var(--tap);
+  margin-top: 24px;
   display: inline-flex;
   align-items: center;
   gap: 8px;
   color: var(--faint);
-  font-size: 11px;
+  font-size: var(--text-xs);
   transition: color 180ms ease-out;
 }
 
@@ -570,7 +592,7 @@ kbd {
 .section-shell {
   width: var(--shell);
   margin: 0 auto;
-  padding: 152px 0;
+  padding: var(--section-space) 0;
 }
 
 .statement {
@@ -587,18 +609,18 @@ kbd {
 }
 
 .statement-copy {
-  max-width: 610px;
+  max-width: 38rem;
   margin: 32px auto 0;
   color: var(--muted);
-  font-size: 18px;
+  font-size: var(--text-lg);
 }
 
 .section-heading {
-  margin-bottom: 64px;
+  margin-bottom: clamp(40px, 6vw, 64px);
   display: grid;
-  grid-template-columns: 1.4fr 0.8fr;
+  grid-template-columns: minmax(0, 1.4fr) minmax(0, 0.8fr);
   align-items: end;
-  gap: 80px;
+  gap: clamp(32px, 7vw, 80px);
 }
 
 .section-heading h2,
@@ -616,7 +638,7 @@ kbd {
 .section-heading > p {
   margin-bottom: 5px;
   color: var(--muted);
-  font-size: 15px;
+  font-size: var(--text-base);
 }
 
 .feature-list {
@@ -635,7 +657,7 @@ kbd {
 
 .feature-number {
   color: var(--faint);
-  font-size: 11px;
+  font-size: 0.75rem;
 }
 
 .feature-icon {
@@ -666,28 +688,29 @@ kbd {
 }
 
 .feature-row > div:nth-child(3) p {
-  max-width: 530px;
+  max-width: 34rem;
   margin: 0;
   color: var(--muted);
-  font-size: 14px;
+  font-size: var(--text-sm);
 }
 
 .feature-command {
   margin: 8px 0 0;
   color: var(--muted);
   font-family: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
-  font-size: 12px;
+  font-size: var(--text-xs);
   white-space: nowrap;
 }
 
 .feature-command kbd {
   padding: 5px 7px;
   background: #e4e6e1;
+  font-size: 0.75rem;
 }
 
 .workflow {
   display: grid;
-  grid-template-columns: 0.75fr 1.25fr;
+  grid-template-columns: minmax(0, 0.75fr) minmax(0, 1.25fr);
   align-items: center;
   gap: 10%;
 }
@@ -716,7 +739,7 @@ kbd {
   background: #e7e8e4;
   color: #4c504d;
   font-family: "SFMono-Regular", Consolas, monospace;
-  font-size: 11px;
+  font-size: 0.75rem;
   line-height: 1;
   text-align: center;
 }
@@ -724,7 +747,7 @@ kbd {
 .shortcut-list dd {
   margin: 0;
   color: var(--muted);
-  font-size: 13px;
+  font-size: var(--text-sm);
 }
 
 .search-demo {
@@ -828,8 +851,8 @@ kbd {
 .trust-points {
   padding-top: 42px;
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 8%;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: clamp(24px, 5vw, 64px);
   border-top: 1px solid var(--line);
 }
 
@@ -841,21 +864,22 @@ kbd {
 .trust-points p {
   margin: 0;
   color: var(--muted);
-  font-size: 14px;
+  font-size: var(--text-sm);
 }
 
 .beta-panel {
-  padding: 72px;
+  padding: clamp(40px, 7vw, 72px);
   display: grid;
-  grid-template-columns: 1fr 0.8fr;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 0.8fr);
   gap: 10%;
   border-radius: var(--radius-lg);
   background: #eceeea;
 }
 
 .beta-copy p {
+  max-width: 34rem;
   color: #585d59;
-  font-size: 15px;
+  font-size: var(--text-base);
 }
 
 .beta-copy p + p {
@@ -863,13 +887,20 @@ kbd {
 }
 
 .beta-copy a {
-  margin-top: 14px;
+  min-height: var(--tap);
+  margin-top: 6px;
   display: inline-flex;
   align-items: center;
   gap: 7px;
   color: var(--accent);
-  font-size: 13px;
+  font-size: var(--text-sm);
   font-weight: 620;
+  text-underline-offset: 4px;
+}
+
+.beta-copy a:hover {
+  color: var(--accent-hover);
+  text-decoration: underline;
 }
 
 .beta-copy a svg {
@@ -881,7 +912,7 @@ kbd {
 
 .faq {
   display: grid;
-  grid-template-columns: 0.7fr 1.3fr;
+  grid-template-columns: minmax(0, 0.7fr) minmax(0, 1.3fr);
   gap: 12%;
 }
 
@@ -899,10 +930,16 @@ summary {
   align-items: center;
   justify-content: space-between;
   gap: 24px;
+  padding-block: 12px;
   cursor: pointer;
-  font-size: 14px;
+  font-size: var(--text-base);
   font-weight: 580;
   list-style: none;
+  transition: color 180ms ease-out;
+}
+
+summary:hover {
+  color: var(--accent);
 }
 
 summary::-webkit-details-marker {
@@ -911,8 +948,9 @@ summary::-webkit-details-marker {
 
 summary::after {
   content: "+";
+  flex: none;
   color: var(--faint);
-  font-size: 20px;
+  font-size: 1.375rem;
   font-weight: 300;
 }
 
@@ -921,10 +959,10 @@ details[open] summary::after {
 }
 
 details p {
-  max-width: 610px;
+  max-width: 65ch;
   margin: -3px 44px 26px 0;
   color: var(--muted);
-  font-size: 13px;
+  font-size: var(--text-sm);
 }
 
 .final-cta {
@@ -951,22 +989,22 @@ details p {
 }
 
 .footer-shell {
-  padding: 64px 0 72px;
+  padding: clamp(48px, 6vw, 64px) 0 clamp(48px, 7vw, 72px);
   display: grid;
-  grid-template-columns: 1fr 1.4fr;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.4fr);
   gap: 12%;
 }
 
 .footer-brand > p {
   max-width: 300px;
-  margin: 18px 0 0;
+  margin: 12px 0 0;
   color: var(--faint);
-  font-size: 13px;
+  font-size: var(--text-xs);
 }
 
 .footer-shell nav {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 32px;
 }
 
@@ -974,21 +1012,25 @@ details p {
   display: flex;
   flex-direction: column;
   align-items: flex-start;
-  gap: 10px;
+  gap: 2px;
 }
 
 .footer-shell nav p {
   margin-bottom: 5px;
   color: var(--ink);
-  font-size: 11px;
+  font-size: 0.75rem;
   font-weight: 650;
   letter-spacing: 0.08em;
   text-transform: uppercase;
 }
 
 .footer-shell nav a {
+  /* Cible de 32px au pointeur, 44px au doigt (voir plus bas) */
+  min-height: 32px;
+  display: inline-flex;
+  align-items: center;
   color: var(--muted);
-  font-size: 12px;
+  font-size: 0.875rem;
   transition: color 180ms ease-out;
 }
 
@@ -999,14 +1041,16 @@ details p {
 .footer-meta {
   padding: 20px 0 28px;
   display: flex;
+  flex-wrap: wrap;
   justify-content: space-between;
+  gap: 6px 24px;
   border-top: 1px solid var(--line);
 }
 
 .footer-meta p {
   margin: 0;
   color: var(--faint);
-  font-size: 10px;
+  font-size: var(--text-xs);
 }
 
 .noscript-note {
@@ -1020,7 +1064,7 @@ details p {
   border-radius: 8px;
   background: var(--ink);
   color: white;
-  font-size: 12px;
+  font-size: var(--text-xs);
   text-align: center;
 }
 
@@ -1047,80 +1091,54 @@ details p {
   outline-offset: 3px;
 }
 
-@media (max-width: 840px) {
-  :root {
-    --shell: min(100% - 32px, 680px);
+/* ================================================================
+   INTERACTIONS SELON LE PÉRIPHÉRIQUE
+
+   Le survol n'existe qu'avec une souris ou un pavé tactile : l'effet
+   de soulèvement n'est pas appliqué au doigt, où il resterait collé
+   après le toucher. Au doigt, chaque lien isolé reçoit une zone de
+   44px, quelle que soit la largeur de l'écran.
+   ================================================================ */
+@media (hover: hover) and (pointer: fine) {
+  .button:hover {
+    transform: translateY(-1px);
   }
 
-  .menu-button {
-    width: 38px;
-    height: 38px;
-    padding: 0;
-    display: grid;
-    place-content: center;
-    gap: 5px;
-    border: 0;
-    border-radius: 8px;
-    background: transparent;
+  .button:hover:active {
+    transform: scale(0.98);
   }
+}
 
-  .menu-button > span:not(.sr-only) {
-    width: 18px;
-    height: 1px;
-    display: block;
-    background: var(--ink);
-    transition: transform 180ms ease-out;
-  }
-
-  .menu-button[aria-expanded="true"] > span:nth-of-type(2) {
-    transform: translateY(3px) rotate(45deg);
-  }
-
-  .menu-button[aria-expanded="true"] > span:nth-of-type(3) {
-    transform: translateY(-3px) rotate(-45deg);
-  }
-
-  .main-nav {
-    position: fixed;
-    top: 72px;
-    right: 0;
-    left: 0;
-    height: calc(100svh - 72px);
-    padding: 48px 24px;
-    display: flex;
-    flex-direction: column;
-    align-items: stretch;
-    gap: 0;
-    background: var(--bg);
-    opacity: 0;
-    pointer-events: none;
-    transform: translateY(-8px);
-    transition:
-      opacity 180ms ease-out,
-      transform 180ms ease-out;
-  }
-
-  .main-nav.is-open {
-    opacity: 1;
-    pointer-events: auto;
-    transform: translateY(0);
-  }
-
+@media (pointer: coarse) {
   .main-nav a {
-    padding: 18px 4px;
-    border-bottom: 1px solid var(--line);
-    font-size: 17px;
+    min-height: var(--tap);
+    min-width: var(--tap);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
   }
 
-  .main-nav .nav-download {
-    margin-top: 24px;
-    border: 0;
-    text-align: center;
+  .footer-shell nav div {
+    gap: 0;
   }
 
+  .footer-shell nav a {
+    min-height: var(--tap);
+    min-width: var(--tap);
+  }
+}
+
+/* ================================================================
+   TABLETTE — jusqu'à 900px
+
+   La navigation complète tient encore : elle reste visible. Les blocs
+   éditoriaux passent sur une colonne, mais les listes courtes
+   exploitent la largeur disponible sur deux colonnes.
+   ================================================================ */
+@media (max-width: 900px) {
   .hero {
     min-height: auto;
-    padding-top: 132px;
+    padding-top: calc(var(--header-height) + 64px);
   }
 
   .hero-copy {
@@ -1131,38 +1149,231 @@ details p {
     letter-spacing: -0.055em;
   }
 
-  .section-shell {
-    padding: 108px 0;
-  }
-
   .section-heading,
   .workflow,
   .beta-panel,
   .faq {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr);
   }
 
   .section-heading,
   .workflow,
   .faq {
-    gap: 44px;
-  }
-
-  .section-heading {
-    margin-bottom: 42px;
+    gap: clamp(28px, 5vw, 44px);
   }
 
   .section-heading > p {
-    max-width: 520px;
+    max-width: 34rem;
   }
 
+  /* Numéro retiré, commande alignée à droite : la ligne reste lisible
+     d'un coup d'œil sans les quatre colonnes du desktop */
   .feature-row {
-    grid-template-columns: 40px 1fr;
-    gap: 16px;
+    min-height: 0;
+    padding: 32px 0;
+    grid-template-columns: 44px minmax(0, 1fr) auto;
+    gap: 20px;
   }
 
   .feature-number {
     display: none;
+  }
+
+  /* L'illustration précède le texte qu'elle explique */
+  .search-demo {
+    order: -1;
+  }
+
+  .shortcut-list {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    column-gap: 32px;
+  }
+
+  .beta-panel {
+    gap: 32px;
+  }
+
+  .footer-shell {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 40px;
+  }
+}
+
+/* ================================================================
+   MOBILE — jusqu'à 640px
+
+   Une colonne, l'action principale toujours à portée de pouce dans
+   l'en-tête, les éléments décoratifs réduits ou retirés.
+   ================================================================ */
+@media (max-width: 640px) {
+  :root {
+    --header-height: 64px;
+  }
+
+  /* --- En-tête : téléchargement visible, navigation derrière le menu --- */
+  .header-cta {
+    min-height: var(--tap);
+    margin-left: auto;
+    margin-right: 4px;
+    padding: 0 16px;
+    display: inline-flex;
+    align-items: center;
+    border-radius: 9px;
+    background: var(--ink);
+    color: white;
+    font-size: 0.875rem;
+    font-weight: 600;
+  }
+
+  .header-cta:active {
+    background: #303331;
+  }
+
+  .menu-button {
+    width: var(--tap);
+    height: var(--tap);
+    margin-right: -10px;
+    padding: 0;
+    display: grid;
+    place-content: center;
+    gap: 5px;
+    border: 0;
+    border-radius: 10px;
+    background: transparent;
+    cursor: pointer;
+  }
+
+  .menu-button:active {
+    background: var(--surface-soft);
+  }
+
+  .menu-button > span:not(.sr-only) {
+    width: 20px;
+    height: 1.5px;
+    display: block;
+    background: var(--ink);
+    transition: transform 180ms ease-out;
+  }
+
+  .menu-button[aria-expanded="true"] > span:nth-of-type(2) {
+    transform: translateY(3.25px) rotate(45deg);
+  }
+
+  .menu-button[aria-expanded="true"] > span:nth-of-type(3) {
+    transform: translateY(-3.25px) rotate(-45deg);
+  }
+
+  /* Menu fermé : invisible ET hors du parcours clavier (visibility),
+     l'opacité seule laisserait les liens atteignables à la tabulation */
+  .main-nav {
+    position: fixed;
+    top: var(--header-height);
+    right: 0;
+    left: 0;
+    height: calc(100dvh - var(--header-height));
+    padding: 24px var(--gutter) 48px;
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    background: var(--bg);
+    visibility: hidden;
+    opacity: 0;
+    transform: translateY(-8px);
+    transition:
+      opacity 180ms ease-out,
+      transform 180ms ease-out,
+      visibility 0s linear 180ms;
+  }
+
+  .main-nav.is-open {
+    visibility: visible;
+    opacity: 1;
+    transform: translateY(0);
+    transition-delay: 0s;
+  }
+
+  .main-nav a {
+    min-height: 56px;
+    padding: 0 4px;
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+    border-bottom: 1px solid var(--line);
+    color: var(--ink);
+    font-size: 1.125rem;
+  }
+
+  .main-nav a:active {
+    background: var(--surface-soft);
+  }
+
+  /* Doublon du bouton de l'en-tête, déjà visible au-dessus du menu */
+  .main-nav .nav-download {
+    display: none;
+  }
+
+  /* --- Hero --- */
+  .hero {
+    padding-top: calc(var(--header-height) + 44px);
+    padding-bottom: 40px;
+  }
+
+  h1 {
+    font-size: clamp(2.5rem, 12.5vw, 4rem);
+    line-height: 1.02;
+  }
+
+  .hero-intro {
+    font-size: var(--text-base);
+  }
+
+  /* Actions principales pleine largeur, empilées avec un écart suffisant
+     pour éviter le mauvais toucher */
+  .hero-actions {
+    width: 100%;
+    align-items: stretch;
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .hero-actions .button {
+    width: 100%;
+    min-height: 52px;
+  }
+
+  .product-stage {
+    border-radius: 16px;
+  }
+
+  /* Format carré : la palette et deux résultats tiennent entiers,
+     là où le 16:9 du desktop les coupait */
+  .motion-demo {
+    aspect-ratio: 1 / 1;
+  }
+
+  .motion-palette {
+    top: 16%;
+    width: 90%;
+  }
+
+  .motion-footer span:last-child {
+    display: none;
+  }
+
+  /* On fait défiler naturellement au doigt : l'invite n'apporte rien */
+  .scroll-cue {
+    display: none;
+  }
+
+  /* --- Sections --- */
+  .feature-row {
+    padding: 28px 0;
+    grid-template-columns: 40px minmax(0, 1fr);
+    gap: 16px;
   }
 
   .feature-command {
@@ -1170,96 +1381,14 @@ details p {
     margin-top: 0;
   }
 
-  .search-demo {
-    order: -1;
-  }
-
-  .trust-points {
-    gap: 4%;
-  }
-
-  .beta-panel {
-    padding: 48px;
-    gap: 40px;
-  }
-
-  .footer-shell {
-    grid-template-columns: 1fr;
-    gap: 48px;
-  }
-}
-
-@media (max-width: 560px) {
-  :root {
-    --shell: calc(100% - 32px);
-  }
-
-  .hero {
-    padding-top: 116px;
-  }
-
-  h1 {
-    font-size: clamp(2.85rem, 15vw, 4.6rem);
-    line-height: 1;
-  }
-
-  .hero-intro {
-    font-size: 16px;
-  }
-
-  .hero-actions {
-    width: 100%;
-    align-items: stretch;
-    flex-direction: column;
-  }
-
-  .button {
-    width: 100%;
-  }
-
-  .product-stage {
-    border-radius: 14px;
-  }
-
-  .stage-toolbar {
-    display: none;
-  }
-
-  .section-shell {
-    padding: 88px 0;
-  }
-
-  .statement-copy {
-    font-size: 16px;
-  }
-
-  .feature-row {
-    padding: 30px 0;
-  }
-
-  .trust-points {
-    grid-template-columns: 1fr;
-    gap: 44px;
-  }
-
-  .trust-points > div {
-    padding-bottom: 30px;
-    border-bottom: 1px solid var(--line);
-  }
-
-  .beta {
-    width: 100%;
-  }
-
-  .beta-panel {
-    padding: 56px 24px;
-    border-radius: 0;
+  .shortcut-list {
+    grid-template-columns: minmax(0, 1fr);
   }
 
   .demo-input {
-    height: 65px;
+    height: 64px;
     padding: 0 16px;
-    font-size: 15px;
+    font-size: var(--text-base);
   }
 
   .demo-footer {
@@ -1270,14 +1399,79 @@ details p {
     display: none;
   }
 
+  /* Liste compacte icône + texte plutôt que trois blocs empilés */
+  .trust-points {
+    padding-top: 0;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 0;
+    border-top: 0;
+  }
+
+  .trust-points > div {
+    padding: 24px 0;
+    display: grid;
+    grid-template-columns: 24px minmax(0, 1fr);
+    column-gap: 16px;
+    border-top: 1px solid var(--line);
+  }
+
+  .trust-points svg {
+    grid-row: span 2;
+    margin: 2px 0 0;
+  }
+
+  .trust-points h3 {
+    margin-bottom: 4px;
+  }
+
+  /* Panneau pleine largeur : le texte garde l'alignement de la gouttière */
+  .beta {
+    width: 100%;
+  }
+
+  .beta-panel {
+    padding: 56px var(--gutter);
+    border-radius: 0;
+  }
+
+  summary {
+    min-height: 64px;
+    gap: 16px;
+  }
+
+  details p {
+    margin-right: 0;
+  }
+
+  /* --- Pied de page --- */
   .footer-shell nav {
-    grid-template-columns: 1fr 1fr;
-    row-gap: 40px;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    row-gap: 32px;
+  }
+
+  .footer-shell nav div {
+    gap: 0;
+  }
+
+  .footer-shell nav a {
+    min-height: var(--tap);
   }
 
   .footer-meta {
     flex-direction: column;
-    gap: 6px;
+  }
+}
+
+/* ================================================================
+   TRÈS PETITS ÉCRANS — jusqu'à 360px
+   ================================================================ */
+@media (max-width: 360px) {
+  .header-cta {
+    padding: 0 12px;
+  }
+
+  .footer-shell nav {
+    grid-template-columns: minmax(0, 1fr);
   }
 }
 
