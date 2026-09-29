@@ -91,6 +91,166 @@ async function resolveLatestRelease() {
 
 resolveLatestRelease()
 
+const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches
+
+// === DÉMO MOTION DESIGN DU HERO ===
+//
+// Une boucle scénarisée rejoue les gestes réels de l'application : raccourci,
+// frappe, résultats, Entrée. Sans JavaScript ou en mouvement réduit, le HTML
+// livre la première scène figée ; la boucle ne démarre jamais.
+
+const motionScenes = [
+  {
+    query: 'firef',
+    count: '2 résultats',
+    toast: 'Firefox s’ouvre',
+    items: [
+      { icon: 'F', title: 'Firefox', meta: 'Application' },
+      { icon: 'N', title: 'Navigateur de fichiers', meta: 'Application' }
+    ]
+  },
+  {
+    query: '?rapport',
+    count: '2 fichiers',
+    toast: 'rapport-projet.pdf s’ouvre',
+    items: [
+      { icon: 'R', title: 'rapport-projet.pdf', meta: 'Document · ~/Documents' },
+      { icon: 'R', title: 'rapport-2025.odt', meta: 'Document · ~/Bureau' }
+    ]
+  },
+  {
+    query: '23*7+12',
+    count: 'Calculatrice',
+    toast: 'Résultat copié',
+    items: [{ icon: '=', title: '173', meta: 'Entrée pour copier' }]
+  },
+  {
+    query: '10 km to mi',
+    count: 'Conversion',
+    toast: 'Conversion copiée',
+    items: [{ icon: '⇄', title: '6,21 mi', meta: '10 kilomètres en miles' }]
+  },
+  {
+    query: '>htop',
+    count: 'Commande',
+    toast: 'Commande lancée',
+    items: [{ icon: '>', title: 'Exécuter htop', meta: 'Commande dans le terminal' }]
+  }
+]
+
+const motionStage = document.querySelector('[data-motion-demo]')
+const motionPalette = document.querySelector('[data-motion-palette]')
+const motionHint = document.querySelector('[data-motion-hint]')
+const motionQuery = document.querySelector('[data-motion-query]')
+const motionResults = document.querySelector('[data-motion-results]')
+const motionCount = document.querySelector('[data-motion-count]')
+const motionToast = document.querySelector('[data-motion-toast]')
+
+if (
+  motionStage &&
+  motionPalette &&
+  motionHint &&
+  motionQuery &&
+  motionResults &&
+  motionCount &&
+  motionToast &&
+  !prefersReducedMotion
+) {
+  const sleep = (ms) => new Promise((resolve) => window.setTimeout(resolve, ms))
+
+  let stageInView = true
+  if ('IntersectionObserver' in window) {
+    new IntersectionObserver(
+      (entries) => {
+        stageInView = entries.some((entry) => entry.isIntersecting)
+      },
+      { threshold: 0.25 }
+    ).observe(motionStage)
+  }
+
+  // La boucle se met en pause hors écran ou onglet masqué : rien à animer.
+  async function untilStageVisible() {
+    while (!stageInView || document.hidden) {
+      await sleep(420)
+    }
+  }
+
+  function renderMotionResults(items) {
+    motionResults.replaceChildren()
+    items.forEach((item, index) => {
+      const row = document.createElement('li')
+      row.className = index === 0 ? 'motion-row is-selected' : 'motion-row'
+
+      const icon = document.createElement('span')
+      icon.className = 'motion-row-icon'
+      icon.textContent = item.icon
+
+      const text = document.createElement('span')
+      text.className = 'motion-row-text'
+      const title = document.createElement('strong')
+      title.textContent = item.title
+      const meta = document.createElement('small')
+      meta.textContent = item.meta
+      text.append(title, meta)
+
+      row.append(icon, text)
+      motionResults.append(row)
+      window.setTimeout(() => row.classList.add('is-in'), 50 + index * 110)
+    })
+  }
+
+  function resetMotionScene() {
+    motionQuery.textContent = ''
+    motionCount.textContent = ''
+    motionResults.replaceChildren()
+    motionPalette.classList.remove('is-open', 'is-typing')
+  }
+
+  async function playMotionScene(scene) {
+    motionHint.classList.add('is-visible')
+    await sleep(1150)
+    motionHint.classList.remove('is-visible')
+    await sleep(240)
+
+    motionPalette.classList.add('is-open')
+    await sleep(520)
+
+    motionPalette.classList.add('is-typing')
+    for (const char of scene.query) {
+      motionQuery.textContent += char
+      await sleep(88)
+    }
+    await sleep(300)
+
+    renderMotionResults(scene.items)
+    motionCount.textContent = scene.count
+    await sleep(1350)
+
+    motionResults.querySelector('.is-selected')?.classList.add('is-activated')
+    await sleep(380)
+
+    motionPalette.classList.remove('is-open')
+    motionToast.textContent = scene.toast
+    motionToast.classList.add('is-visible')
+    await sleep(1250)
+    motionToast.classList.remove('is-visible')
+
+    await sleep(420)
+    resetMotionScene()
+  }
+
+  ;(async () => {
+    resetMotionScene()
+    await sleep(600)
+    let sceneIndex = 0
+    while (true) {
+      await untilStageVisible()
+      await playMotionScene(motionScenes[sceneIndex])
+      sceneIndex = (sceneIndex + 1) % motionScenes.length
+    }
+  })()
+}
+
 const demoCases = [
   { query: 'firefox', title: 'Firefox', meta: 'Application' },
   { query: '?rapport', title: 'rapport-projet.pdf', meta: 'Document · ~/Documents' },
@@ -102,12 +262,7 @@ const queryNode = document.querySelector('[data-demo-query]')
 const titleNode = document.querySelector('[data-demo-title]')
 const metaNode = document.querySelector('[data-demo-meta]')
 
-if (
-  queryNode &&
-  titleNode &&
-  metaNode &&
-  !window.matchMedia('(prefers-reduced-motion: reduce)').matches
-) {
+if (queryNode && titleNode && metaNode && !prefersReducedMotion) {
   let demoIndex = 0
   window.setInterval(() => {
     demoIndex = (demoIndex + 1) % demoCases.length
