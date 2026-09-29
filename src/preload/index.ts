@@ -30,6 +30,9 @@ const electronApi: ElectronApi = {
   /** Liste les fichiers indexés du répertoire personnel. */
   getFiles: () => ipcRenderer.invoke('get-files'),
 
+  /** Versions des index, pour ne recharger que ce qui a changé. */
+  getIndexVersion: () => ipcRenderer.invoke('get-index-version'),
+
   /** Force un nouveau scan, en ignorant le cache. */
   refreshIndex: () => ipcRenderer.invoke('refresh-index'),
 

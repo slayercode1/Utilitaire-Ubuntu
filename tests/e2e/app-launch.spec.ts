@@ -112,6 +112,7 @@ test('posture de sécurité du renderer', async ({ mainWindow, electronApp }) =>
       'executeSettingAction',
       'getApplications',
       'getFiles',
+      'getIndexVersion',
       'getSettingState',
       'hideWindow',
       'launchApp',
@@ -200,9 +201,13 @@ test('performance : démarrage, mémoire et cycle affichage/masquage', async ({
     )
   )
 
-  const windowStillAlive = await electronApp.evaluate(({ BrowserWindow }) =>
-    Boolean(BrowserWindow.getAllWindows()[0]?.isVisible())
-  )
+  // La visibilité ne prouve rien ici : une perte de focus pendant l'attente
+  // masque la fenêtre, comme voulu. Seule compte la survie de la fenêtre et
+  // de son renderer après les cycles.
+  const windowStillAlive = await electronApp.evaluate(({ BrowserWindow }) => {
+    const win = BrowserWindow.getAllWindows()[0]
+    return Boolean(win && !win.isDestroyed() && !win.webContents.isCrashed())
+  })
   expect(windowStillAlive).toBe(true)
 
   // Garde-fou large : plus de 3× la mémoire initiale après dix cycles

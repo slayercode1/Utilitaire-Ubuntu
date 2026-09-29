@@ -37,6 +37,52 @@ X-GNOME-Autostart-enabled=true
 EOF
 chmod 0644 /etc/xdg/autostart/finder.desktop
 
+# Mise à niveau : l'instance déjà lancée exécute l'ancienne version, dont les
+# fichiers viennent d'être remplacés sous ses pieds. Sans arrêt explicite, le
+# lancement ci-dessous se heurterait à son verrou mono-instance et s'effacerait
+# au profit de l'ancienne version, qui resterait active jusqu'au relog.
+#
+# Seuls les processus principaux sont visés (les processus Chromium portent
+# --type=) et jamais un ancêtre de ce script : lorsque la mise à jour vient de
+# l'updater intégré, c'est l'ancienne instance qui attend la fin de dpkg, et
+# elle se relance d'elle-même une fois l'installation terminée.
+is_ancestor() {
+    current=$$
+    while [ "$current" -gt 1 ] 2>/dev/null; do
+        [ "$current" = "$1" ] && return 0
+        # Champ 4 de /proc/PID/stat, lu après le nom de commande entre parenthèses
+        current=$(sed 's/^.*) //' "/proc/$current/stat" 2>/dev/null | cut -d' ' -f2)
+        [ -n "$current" ] || return 1
+    done
+    return 1
+}
+
+if [ "${1:-}" = "configure" ] && [ -n "${2:-}" ] && command -v pgrep >/dev/null 2>&1; then
+    stopped=""
+    for pid in $(pgrep -x finder 2>/dev/null || true); do
+        case "$(readlink "/proc/$pid/exe" 2>/dev/null || true)" in
+            /opt/Finder/finder | "/opt/Finder/finder (deleted)") ;;
+            *) continue ;;
+        esac
+        if tr '\000' ' ' <"/proc/$pid/cmdline" 2>/dev/null | grep -q -- '--type='; then
+            continue
+        fi
+        is_ancestor "$pid" && continue
+        kill -TERM "$pid" 2>/dev/null && stopped="$stopped $pid"
+    done
+
+    # Le verrou mono-instance n'est libéré qu'à la sortie effective
+    for _ in 1 2 3 4 5 6 7 8 9 10; do
+        alive=""
+        for pid in $stopped; do
+            kill -0 "$pid" 2>/dev/null && alive="$alive $pid"
+        done
+        [ -n "$alive" ] || break
+        stopped=$alive
+        sleep 0.5
+    done
+fi
+
 # Démarrage immédiat dans chaque session graphique active, pour que le
 # raccourci global réponde sans attendre un lancement manuel ni un relog.
 # Le processus est confié au gestionnaire systemd de l'utilisateur concerné :

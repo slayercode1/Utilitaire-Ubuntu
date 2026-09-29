@@ -85,6 +85,39 @@ const PYTHON_PROBE =
   'X.XOpenDisplay.restype=ctypes.c_void_p;' +
   'assert X.XOpenDisplay(None)'
 
+/**
+ * Associe chaque ligne reçue du processus à la requête qui l'a demandée.
+ *
+ * Les réponses arrivent dans l'ordre des requêtes, mais une réponse peut
+ * arriver après l'expiration de sa requête, ou être découpée entre deux
+ * paquets. Attacher un écouteur par requête faisait attribuer une réponse
+ * tardive à la requête suivante : après un seul dépassement de délai, chaque
+ * ouverture recevait la position de l'ouverture précédente, et la fenêtre
+ * s'ouvrait sur le mauvais écran jusqu'au redémarrage.
+ */
+export class ResponseQueue {
+  private buffer = ''
+  private readonly waiting: ((line: string) => void)[] = []
+
+  /** Enregistre une requête ; `onLine` reçoit la ligne qui lui répond. */
+  expect(onLine: (line: string) => void): void {
+    this.waiting.push(onLine)
+  }
+
+  /** Transmet un paquet reçu, éventuellement partiel ou multiple. */
+  feed(chunk: string): void {
+    this.buffer += chunk
+
+    let newline = this.buffer.indexOf('\n')
+    while (newline !== -1) {
+      const line = this.buffer.slice(0, newline)
+      this.buffer = this.buffer.slice(newline + 1)
+      this.waiting.shift()?.(line)
+      newline = this.buffer.indexOf('\n')
+    }
+  }
+}
+
 /** Stratégie détectée, calculée une seule fois. */
 let strategy: QueryStrategy | undefined
 
@@ -92,6 +125,9 @@ let strategy: QueryStrategy | undefined
 type CursorDaemon = ChildProcessByStdio<Writable, Readable, null>
 
 let daemon: CursorDaemon | null = null
+
+/** File des requêtes en attente du processus courant. */
+let responses = new ResponseQueue()
 
 /**
  * Vérifie qu'une commande s'exécute sans erreur.
@@ -151,6 +187,16 @@ function ensureDaemon(): CursorDaemon | null {
 
     child.stdout.setEncoding('utf8')
 
+    const queue = new ResponseQueue()
+    child.stdout.on('data', (chunk: string) => queue.feed(chunk))
+
+    // Écrire vers un processus qui vient de mourir émet EPIPE sur stdin :
+    // sans écouteur, l'erreur remonterait jusqu'au gestionnaire global, qui
+    // quitte l'application.
+    child.stdin.on('error', () => {
+      if (daemon === child) daemon = null
+    })
+
     // Un processus mort ne doit pas rester référencé : la prochaine
     // interrogation en démarrera un neuf.
     const oublier = (): void => {
@@ -163,6 +209,7 @@ function ensureDaemon(): CursorDaemon | null {
     child.unref()
 
     daemon = child
+    responses = queue
     return child
   } catch {
     return null
@@ -191,6 +238,8 @@ export function stopCursorDaemon(): void {
 
   daemon.removeAllListeners()
   daemon.stdout.removeAllListeners()
+  // L'écouteur d'erreur de stdin reste en place : un EPIPE peut encore
+  // survenir pendant l'arrêt.
   daemon.kill()
   daemon = null
 }
@@ -226,17 +275,14 @@ function queryDaemon(): Promise<CursorPoint | null> {
       termine = true
 
       clearTimeout(minuteur)
-      child.stdout.off('data', surReponse)
       resolve(position)
-    }
-
-    const surReponse = (chunk: string): void => {
-      finir(parseResponse(chunk))
     }
 
     const minuteur = setTimeout(() => finir(null), RESPONSE_TIMEOUT)
 
-    child.stdout.on('data', surReponse)
+    // Même expirée, la requête garde sa place dans la file : sa réponse
+    // tardive y sera consommée au lieu d'être livrée à la suivante.
+    responses.expect((line) => finir(parseResponse(line)))
 
     try {
       child.stdin.write('\n')

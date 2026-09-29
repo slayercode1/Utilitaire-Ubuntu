@@ -16,6 +16,7 @@
 export const REQUEST_CHANNELS = Object.freeze({
   GET_APPLICATIONS: 'get-applications',
   GET_FILES: 'get-files',
+  GET_INDEX_VERSION: 'get-index-version',
   REFRESH_INDEX: 'refresh-index',
   SEARCH_SETTINGS: 'search-settings',
   GET_SETTING_STATE: 'get-setting-state',

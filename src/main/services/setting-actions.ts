@@ -33,7 +33,8 @@ export interface SettingDefinition {
 /** Dépendances nécessaires à l'exécution d'une action. */
 export interface SettingActionDeps {
   parseArguments: (command: string) => string[]
-  launch: (args: string[], description: string) => boolean
+  /** Doit refléter le démarrage réel du processus, pas seulement l'appel. */
+  launch: (args: string[], description: string) => boolean | Promise<boolean>
 }
 
 /** Motif d'échec d'une action. */
@@ -116,7 +117,7 @@ export async function executeSettingAction(
       const args = deps.parseArguments(command)
       if (args.length === 0) continue
 
-      if (deps.launch(args, 'Setting action')) {
+      if (await deps.launch(args, 'Setting action')) {
         return { ok: true, result: command }
       }
     } catch {

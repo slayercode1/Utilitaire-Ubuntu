@@ -48,7 +48,15 @@ const DANGEROUS_EXEC_PATTERNS: readonly RegExp[] = [
   /:\(\)\{/ // Bombe à fourche
 ]
 
-/** Commandes utilisateur refusées quelles que soient les circonstances. */
+/**
+ * Commandes utilisateur refusées quelles que soient les circonstances.
+ *
+ * Garde-fou contre la fausse manipulation, pas frontière de sécurité : une
+ * liste de motifs se contourne trivialement (variables, alias, encodage), et
+ * l'utilisateur dispose de toute façon d'un terminal. La protection réelle est
+ * la confirmation native affichée par le processus principal avec la commande
+ * complète, hors de portée d'un renderer compromis.
+ */
 const BLOCKED_USER_COMMANDS: readonly RegExp[] = [
   /^\s*rm\s+-rf\s+\//i,
   /:\(\)\{.*:\|:&\};:/,

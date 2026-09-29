@@ -10,9 +10,12 @@
  *   ce qui évite de descendre dans des arborescences entières
  * - Les liens symboliques ne sont résolus que pour les entrées effectivement
  *   retenues, et les dossiers déjà visités ne sont jamais re-parcourus
+ * - Les accès disque sont asynchrones : le parcours ne bloque plus le
+ *   processus principal, qui continue de répondre au raccourci global
  */
 
-import fs from 'node:fs'
+import type { Dirent } from 'node:fs'
+import fs from 'node:fs/promises'
 import path from 'node:path'
 import { HOME, SYSTEM_DATA_ROOTS } from '../../shared/paths.js'
 import type { FileEntry, RuntimeValue } from '../../shared/types.js'
@@ -127,9 +130,9 @@ const MAX_INDEXED_ENTRIES = 50000
  * partagé : un lien pointant ailleurs est ignoré, pour éviter d'indexer des
  * zones hors du périmètre de l'utilisateur.
  */
-function resolveSafeSymlink(fullPath: string, homeDir: string): string | null {
+async function resolveSafeSymlink(fullPath: string, homeDir: string): Promise<string | null> {
   try {
-    const realPath = fs.realpathSync(fullPath)
+    const realPath = await fs.realpath(fullPath)
 
     const allowed =
       isPathInside(realPath, homeDir) ||
@@ -153,7 +156,10 @@ function resolveSafeSymlink(fullPath: string, homeDir: string): string | null {
  * récursive concaténait les résultats de chaque sous-dossier dans le tableau
  * parent, recopiant les mêmes entrées une fois par niveau de profondeur.
  */
-function scanDirectoryIterative(rootDir: string, maxDepth: number = MAX_SCAN_DEPTH): FileEntry[] {
+async function scanDirectoryIterative(
+  rootDir: string,
+  maxDepth: number = MAX_SCAN_DEPTH
+): Promise<FileEntry[]> {
   const results: FileEntry[] = []
 
   // Dossiers déjà parcourus, pour ne pas boucler sur un lien symbolique
@@ -175,7 +181,7 @@ function scanDirectoryIterative(rootDir: string, maxDepth: number = MAX_SCAN_DEP
 
     let realDir: string
     try {
-      realDir = fs.realpathSync(dir)
+      realDir = await fs.realpath(dir)
     } catch {
       continue
     }
@@ -183,10 +189,10 @@ function scanDirectoryIterative(rootDir: string, maxDepth: number = MAX_SCAN_DEP
     if (visited.has(realDir)) continue
     visited.add(realDir)
 
-    let entries: fs.Dirent[]
+    let entries: Dirent[]
     try {
       // withFileTypes évite un stat() par entrée : le type est déjà connu
-      entries = fs.readdirSync(dir, { withFileTypes: true })
+      entries = await fs.readdir(dir, { withFileTypes: true })
     } catch {
       // Permissions insuffisantes : c'est normal sur certains dossiers
       continue
@@ -213,11 +219,11 @@ function scanDirectoryIterative(rootDir: string, maxDepth: number = MAX_SCAN_DEP
       let isFile = entry.isFile()
 
       if (entry.isSymbolicLink()) {
-        const realPath = resolveSafeSymlink(fullPath, rootDir)
+        const realPath = await resolveSafeSymlink(fullPath, rootDir)
         if (!realPath) continue
 
         try {
-          const stats = fs.statSync(realPath)
+          const stats = await fs.stat(realPath)
           isDirectory = stats.isDirectory()
           isFile = stats.isFile()
         } catch {
@@ -244,7 +250,7 @@ function scanDirectoryIterative(rootDir: string, maxDepth: number = MAX_SCAN_DEP
 }
 
 /** Scanne tous les fichiers et dossiers du répertoire HOME. */
-export function scanFiles(): FileEntry[] {
+export async function scanFiles(): Promise<FileEntry[]> {
   console.log('📁 Starting file scan from HOME directory...')
 
   if (!HOME) {
@@ -253,7 +259,7 @@ export function scanFiles(): FileEntry[] {
   }
 
   const startedAt = Date.now()
-  const allFiles = scanDirectoryIterative(HOME, MAX_SCAN_DEPTH)
+  const allFiles = await scanDirectoryIterative(HOME, MAX_SCAN_DEPTH)
   const elapsed = Date.now() - startedAt
 
   if (allFiles.length >= MAX_INDEXED_ENTRIES) {

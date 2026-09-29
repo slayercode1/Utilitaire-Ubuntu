@@ -57,6 +57,15 @@ export interface SerializedSetting {
   score: number
 }
 
+/**
+ * Version du contenu de chaque index, incrémentée à chaque changement réel.
+ * Le renderer compare ces numéros avant de recharger un index volumineux.
+ */
+export interface IndexVersion {
+  applications: number
+  files: number
+}
+
 /** Résultat d'un rafraîchissement complet de l'index. */
 export interface RefreshIndexResult {
   applications: AppEntry[]
@@ -75,6 +84,10 @@ export interface IpcRequestMap {
   'get-files': {
     request: []
     response: FileEntry[]
+  }
+  'get-index-version': {
+    request: []
+    response: IndexVersion
   }
   'refresh-index': {
     request: []
@@ -117,6 +130,7 @@ export interface ElectronApi {
   hideWindow(): void
   getApplications(): Promise<AppEntry[]>
   getFiles(): Promise<FileEntry[]>
+  getIndexVersion(): Promise<IndexVersion>
   refreshIndex(): Promise<RefreshIndexResult>
   launchApp(desktopFilePath: string): void
   openFile(filePath: string): void

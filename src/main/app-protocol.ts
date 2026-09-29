@@ -36,12 +36,14 @@ export function registerAppScheme(): void {
 }
 
 /** Retourne un chemin média réel et indexé, ou null en cas de refus. */
-function resolveTrustedMedia(requestUrl: string): string | null {
+async function resolveTrustedMedia(requestUrl: string): Promise<string | null> {
   const candidate = getMediaCandidate(requestUrl)
   if (!candidate) return null
 
-  const applications = getCachedScan(SCAN_KEYS.applications, scanApplications)
-  const files = getCachedScan(SCAN_KEYS.files, scanFiles)
+  const [applications, files] = await Promise.all([
+    getCachedScan(SCAN_KEYS.applications, scanApplications),
+    getCachedScan(SCAN_KEYS.files, scanFiles)
+  ])
   if (!isIndexedMediaPath(candidate, applications, files)) return null
 
   // Revalide la cible réelle au dernier moment : un lien symbolique a pu être
@@ -56,7 +58,7 @@ export async function registerAppProtocol(): Promise<void> {
     throw new Error(`Le protocole ${APP_SCHEME} est déjà enregistré`)
   }
 
-  await protocol.handle(APP_SCHEME, (request) => {
+  await protocol.handle(APP_SCHEME, async (request) => {
     if (request.method !== 'GET') {
       return new Response('Method Not Allowed', {
         status: 405,
@@ -65,7 +67,7 @@ export async function registerAppProtocol(): Promise<void> {
     }
 
     const staticPath = resolveRendererAsset(request.url, RENDERER_ROOT)
-    const mediaPath = staticPath ? null : resolveTrustedMedia(request.url)
+    const mediaPath = staticPath ? null : await resolveTrustedMedia(request.url)
     const target = staticPath ?? mediaPath
 
     if (!target) return new Response('Not Found', { status: 404 })
