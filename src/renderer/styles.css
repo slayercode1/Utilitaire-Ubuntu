@@ -10,12 +10,14 @@
   --surface: 22 22 24;
   --surface-raised: 255 255 255;
 
-  /* Texte : la hiérarchie repose sur l'opacité, pas sur la teinte */
+  /* Texte : la hiérarchie repose sur l'opacité, pas sur la teinte.
+     Sur la surface sombre, 0.52 est le plancher qui garantit un contraste
+     de 4.5:1 (WCAG AA) aux petits textes ; aucun texte lisible ne descend
+     en dessous. */
   --text-primary: 255 255 255;
   --text-strong: 0.94;
-  --text-muted: 0.56;
-  --text-faint: 0.38;
-  --text-ghost: 0.24;
+  --text-muted: 0.64;
+  --text-faint: 0.52;
 
   /* Accent unique, réservé à la sélection et au focus */
   --accent: 122 162 255;
@@ -40,6 +42,14 @@
   --ease: cubic-bezier(0.16, 1, 0.3, 1);
   --duration: 160ms;
   --duration-slow: 220ms;
+
+  /* Tailles de texte : le plus petit texte reste lisible sans zoom */
+  --font-input: 17px;
+  --font-body: 14px;
+  --font-small: 12px;
+
+  /* Surface minimale d'une cible de pointeur (WCAG 2.2, 2.5.8) */
+  --target-min: 24px;
 }
 
 *,
@@ -104,7 +114,7 @@ body {
   min-width: 0;
   padding: var(--space-5) var(--space-6);
   font: inherit;
-  font-size: 17px;
+  font-size: var(--font-input);
   font-weight: 400;
   letter-spacing: -0.01em;
   border: none;
@@ -125,12 +135,18 @@ body {
 
 /* Résultat de calcul, aligné à droite du champ */
 .calculation-result {
+  /* Un résultat très long ne doit pas écraser la saisie */
+  max-width: 45%;
   padding-right: var(--space-6);
   padding-left: var(--space-3);
-  font-size: 17px;
+  font-size: var(--font-input);
   font-variant-numeric: tabular-nums;
   color: rgb(var(--text-primary) / var(--text-muted));
   white-space: nowrap;
+  /* clip et non hidden : hidden crée un conteneur de défilement qui, dans
+     la fenêtre transparente, bloque la production d'images du compositeur */
+  overflow: clip;
+  text-overflow: ellipsis;
   pointer-events: none;
 }
 
@@ -191,7 +207,12 @@ body {
 }
 
 .result-item:hover {
-  background: rgb(var(--text-primary) / 0.04);
+  background: rgb(var(--text-primary) / 0.05);
+}
+
+/* Retour immédiat au clic, avant l'ouverture du résultat */
+.result-item:active {
+  background: rgb(var(--accent) / 0.22);
 }
 
 /* La sélection est le seul état porteur d'information forte :
@@ -214,7 +235,7 @@ body {
 }
 
 .result-name {
-  font-size: 13.5px;
+  font-size: var(--font-body);
   font-weight: 450;
   letter-spacing: -0.005em;
   color: rgb(var(--text-primary) / var(--text-strong));
@@ -227,7 +248,7 @@ body {
    vide creuserait un espace sans raison. */
 .result-description:not(:empty) {
   margin-top: 1px;
-  font-size: 11.5px;
+  font-size: var(--font-small);
   line-height: 1.35;
   color: rgb(var(--text-primary) / var(--text-faint));
   white-space: nowrap;
@@ -235,10 +256,28 @@ body {
   text-overflow: ellipsis;
 }
 
-.no-results {
+/* État vide : une ligne de la liste, mais ni cliquable ni sélectionnable */
+.result-item.no-results {
+  display: block;
   padding: var(--space-5) var(--space-3);
   text-align: center;
-  font-size: 13px;
+  cursor: default;
+}
+
+.result-item.no-results:hover,
+.result-item.no-results:active {
+  background: transparent;
+}
+
+.no-results-title {
+  font-size: var(--font-body);
+  color: rgb(var(--text-primary) / var(--text-muted));
+  overflow-wrap: anywhere;
+}
+
+.no-results-hint {
+  margin-top: var(--space-1);
+  font-size: var(--font-small);
   color: rgb(var(--text-primary) / var(--text-faint));
 }
 
@@ -249,17 +288,18 @@ body {
   width: 26px;
   flex-shrink: 0;
   text-align: center;
-  font-size: 13px;
+  font-size: var(--font-body);
   font-weight: 500;
   font-variant-numeric: tabular-nums;
-  color: rgb(var(--text-primary) / var(--text-ghost));
+  color: rgb(var(--text-primary) / var(--text-muted));
 }
 
 .snippet-item {
   cursor: default;
 }
 
-.snippet-item:hover {
+.snippet-item:hover,
+.snippet-item:active {
   background: transparent;
 }
 
@@ -287,14 +327,16 @@ body {
 }
 
 .open-file-btn {
+  min-width: var(--target-min);
+  min-height: var(--target-min);
   padding: var(--space-1) var(--space-2);
-  font-size: 11.5px;
+  font-size: var(--font-small);
   color: rgb(var(--text-primary) / var(--text-muted));
 }
 
 .delete-history-btn {
-  width: 22px;
-  height: 22px;
+  width: var(--target-min);
+  height: var(--target-min);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -317,7 +359,13 @@ body {
 }
 
 .delete-history-btn:hover {
+  background: rgb(var(--danger) / 0.12);
   color: rgb(var(--danger));
+}
+
+.open-file-btn:active,
+.delete-history-btn:active {
+  transform: scale(0.94);
 }
 
 .open-file-btn:focus-visible,
@@ -397,9 +445,9 @@ body {
    ================================================================ */
 .index-counter {
   padding: var(--space-2) var(--space-4) var(--space-3);
-  font-size: 10.5px;
+  font-size: var(--font-small);
   font-variant-numeric: tabular-nums;
-  color: rgb(var(--text-primary) / var(--text-ghost));
+  color: rgb(var(--text-primary) / var(--text-faint));
   text-align: right;
   pointer-events: none;
   transition: opacity var(--duration-slow) var(--ease);
@@ -407,6 +455,11 @@ body {
 
 .index-counter:empty {
   display: none;
+}
+
+/* Erreur : le libellé porte l'information, la couleur ne fait que la renforcer */
+.index-counter[data-state="error"] {
+  color: rgb(var(--danger));
 }
 
 /* ================================================================

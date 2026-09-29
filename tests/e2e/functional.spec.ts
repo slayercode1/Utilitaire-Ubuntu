@@ -8,7 +8,7 @@
  */
 
 import path from 'node:path'
-import { naturalClick, naturalFill } from '../helpers/interactions'
+import { naturalFill } from '../helpers/interactions'
 import { expect, test } from './fixtures/electron.fixture'
 
 const SCREENSHOTS = path.resolve('test-results/screenshots')
@@ -23,6 +23,29 @@ test("état vide : les cinq snippets d'aide sont proposés", async ({ mainWindow
   await mainWindow.screenshot({
     path: path.join(SCREENSHOTS, '02-empty-snippets-600x500.png')
   })
+  expect(pageErrors).toEqual([])
+})
+
+test('aucun résultat : une recherche préfixée infructueuse est signalée', async ({
+  mainWindow,
+  pageErrors
+}) => {
+  const input = mainWindow.locator('#searchInput')
+  const empty = mainWindow.locator('.no-results')
+
+  await test.step('fichier introuvable', async () => {
+    await naturalFill(mainWindow, input, '?zzqxwv-introuvable')
+    await expect(empty).toBeVisible()
+    await expect(empty.locator('.no-results-title')).toHaveText('Aucun fichier ne correspond')
+    await expect(empty).toHaveAttribute('aria-disabled', 'true')
+  })
+
+  await test.step('conversion non reconnue : un exemple est proposé', async () => {
+    await naturalFill(mainWindow, input, '12 zz to qq')
+    await expect(empty.locator('.no-results-title')).toHaveText('Conversion non reconnue')
+    await expect(empty.locator('.no-results-hint')).toContainText('10 km to mi')
+  })
+
   expect(pageErrors).toEqual([])
 })
 
@@ -219,8 +242,11 @@ test('navigation clavier : flèches, Échap, saisies hostiles', async ({
   await test.step('clics répétés sur un élément inerte', async () => {
     await input.fill('')
     const snippet = mainWindow.locator('.snippet-item').first()
-    await naturalClick(mainWindow, snippet)
-    await snippet.click({ clickCount: 2 })
+    // Les snippets sont déclarés inertes (aria-disabled) : Playwright refuse
+    // d'y cliquer sans `force`, ce qui confirme la sémantique exposée.
+    await expect(snippet).toHaveAttribute('aria-disabled', 'true')
+    await snippet.click({ force: true })
+    await snippet.click({ clickCount: 2, force: true })
     await expect(mainWindow.locator('.snippet-item')).toHaveCount(5)
   })
 

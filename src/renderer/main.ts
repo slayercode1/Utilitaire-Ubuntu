@@ -9,7 +9,7 @@
  * `features/conversion`, où elles sont vérifiables sans navigateur.
  */
 
-import type { RuntimeValue } from '../shared/types.js'
+import type { IndexVersion, RuntimeValue } from '../shared/types.js'
 import { tryConversion } from './features/conversion/convert-units.js'
 import { evaluateMath, isMathExpression } from './features/conversion/evaluate-math.js'
 
@@ -63,6 +63,11 @@ interface HistoryEntry {
   type: string
   name: string
   timestamp: number
+  /**
+   * Identifiant exact de l'élément ouvert (fichier .desktop ou chemin).
+   * Absent des entrées enregistrées par les versions antérieures.
+   */
+  path?: string
 }
 
 let allApps: SearchResult[] = []
@@ -95,6 +100,8 @@ function validateHistoryData(data: RuntimeValue): data is HistoryEntry[] {
     if (typeof entry['timestamp'] !== 'number') return false
     if (typeof entry['type'] !== 'string') return false
     if (typeof entry['name'] !== 'string' || entry['name'].length > 500) return false
+    const path = entry['path']
+    if (path !== undefined && (typeof path !== 'string' || path.length > 4096)) return false
   }
 
   return true
@@ -137,12 +144,13 @@ function addToHistory(query: string, resultType: string, result: SearchResult): 
   // Ne pas ajouter les calculs ou recherches vides
   if (!query.trim() || calculationResult !== null) return
 
-  const entry = {
+  const entry: HistoryEntry = {
     query: query.trim().substring(0, 500),
     timestamp: Date.now(),
     type: resultType,
     name: (result.name || query.trim()).substring(0, 500)
   }
+  if (result.path && result.path.length <= 4096) entry.path = result.path
 
   // Supprimer les doublons (même query), ajouter en tête, garder 5 entrées
   searchHistory = searchHistory.filter((h) => h.query !== entry.query)
@@ -155,6 +163,8 @@ function addToHistory(query: string, resultType: string, result: SearchResult): 
 function removeFromHistory(index: number): void {
   searchHistory.splice(index, 1)
   saveHistory()
+  // La sélection reste sur la ligne suivante, ou la dernière s'il n'y en a plus
+  selectedIndex = Math.max(0, Math.min(selectedIndex, searchHistory.length - 1))
   displayResults()
   // Redonner le focus à l'input pour garder le contrôle clavier
   searchInput.focus()
@@ -181,6 +191,8 @@ function displaySnippets(): void {
   snippets.forEach((snippet) => {
     const item = document.createElement('div')
     item.className = 'result-item snippet-item'
+    // Aide informative : présente dans la liste mais jamais sélectionnable
+    item.setAttribute('aria-disabled', 'true')
 
     const icon = document.createElement('div')
     icon.className = 'snippet-symbol'
@@ -236,9 +248,14 @@ function displayHistory(): void {
     info.appendChild(description)
 
     const deleteBtn = document.createElement('button')
+    deleteBtn.type = 'button'
     deleteBtn.className = 'delete-history-btn'
     deleteBtn.textContent = '×'
-    deleteBtn.title = "Supprimer de l'historique"
+    deleteBtn.title = "Supprimer de l'historique (Suppr)"
+    deleteBtn.setAttribute('aria-label', `Supprimer « ${entry.name} » de l'historique`)
+    // Le clavier passe par la touche Suppr sur la ligne active : le bouton
+    // ne sert qu'à la souris et ne doit pas capter la tabulation.
+    deleteBtn.tabIndex = -1
     deleteBtn.addEventListener('click', (e) => {
       e.stopPropagation()
       removeFromHistory(index)
@@ -249,23 +266,7 @@ function displayHistory(): void {
     item.appendChild(deleteBtn)
 
     item.addEventListener('click', () => {
-      const query = entry.query.toLowerCase()
-
-      let result = allApps.find(
-        (app) => app.name.toLowerCase() === query || app.name.toLowerCase().includes(query)
-      )
-
-      if (result) {
-        result = { ...result, resultType: 'app' }
-      } else {
-        result = allFiles.find(
-          (file) =>
-            file.name.toLowerCase() === entry.name.toLowerCase() || file.path === entry.query
-        )
-        if (result) {
-          result = { ...result, resultType: 'file' }
-        }
-      }
+      const result = resolveHistoryEntry(entry)
 
       if (result) {
         openResult(result)
@@ -279,6 +280,45 @@ function displayHistory(): void {
 
     resultsContainer.appendChild(item)
   })
+}
+
+/**
+ * Retrouve l'élément exact ouvert depuis une entrée d'historique.
+ *
+ * La recherche par sous-chaîne de la requête rouvrait le premier élément
+ * contenant ces lettres : « fi », tapé pour Firefox, pouvait relancer une
+ * autre application. Seules des correspondances exactes sont retenues ; sans
+ * elles, la requête est simplement rejouée.
+ */
+function resolveHistoryEntry(entry: HistoryEntry): SearchResult | null {
+  const wantsApp = entry.type === 'app'
+  const wantsFile = entry.type === 'file'
+
+  if (entry.path) {
+    if (!wantsFile) {
+      const app = allApps.find((candidate) => candidate.path === entry.path)
+      if (app) return { ...app, resultType: 'app' }
+    }
+    if (!wantsApp) {
+      const file = allFiles.find((candidate) => candidate.path === entry.path)
+      if (file) return { ...file, resultType: 'file' }
+    }
+    return null
+  }
+
+  // Entrées antérieures, sans chemin : le nom affiché doit correspondre
+  // exactement, et être unique, pour éviter toute ambiguïté.
+  const name = entry.name.toLowerCase()
+  const pool = wantsFile ? [] : allApps
+  const apps = pool.filter((candidate) => candidate.name.toLowerCase() === name)
+  if (apps.length === 1 && apps[0]) return { ...apps[0], resultType: 'app' }
+
+  if (!wantsApp) {
+    const files = allFiles.filter((candidate) => candidate.name.toLowerCase() === name)
+    if (files.length === 1 && files[0]) return { ...files[0], resultType: 'file' }
+  }
+
+  return null
 }
 
 function getHistoryIcon(): string {
@@ -515,17 +555,35 @@ function openGoogleSearch(query: string): void {
  */
 let indexCounterTimer: ReturnType<typeof setTimeout> | null = null
 
+/** Vrai si une source (applications, fichiers, paramètres) n'a pas pu être chargée. */
+let indexLoadFailed = false
+
+/**
+ * Affiche un état durable du compteur. Un état d'erreur n'est pas effacé
+ * automatiquement : il reste lisible jusqu'à la prochaine action réussie.
+ */
+function setIndexStatus(text: string, state?: 'error'): void {
+  if (indexCounterTimer) clearTimeout(indexCounterTimer)
+  indexCounterTimer = null
+  indexCounter.style.opacity = ''
+  indexCounter.textContent = text
+  if (state) {
+    indexCounter.dataset['state'] = state
+  } else {
+    delete indexCounter.dataset['state']
+  }
+}
+
 function updateIndexCounter(): void {
   const total = allApps.length + allFiles.length
 
   if (total === 0) {
-    indexCounter.textContent = 'Indexation…'
+    setIndexStatus('Indexation…')
     return
   }
 
-  indexCounter.textContent = `${allApps.length} applications · ${allFiles.length} fichiers`
+  setIndexStatus(`${allApps.length} applications · ${allFiles.length} fichiers`)
 
-  if (indexCounterTimer) clearTimeout(indexCounterTimer)
   indexCounterTimer = setTimeout(() => {
     indexCounter.style.opacity = '0'
     // Vider le texte après la transition libère aussi la hauteur occupée
@@ -543,6 +601,7 @@ async function loadApplications() {
     updateIndexCounter()
   } catch {
     console.error('Error loading applications')
+    indexLoadFailed = true
   }
 }
 
@@ -553,6 +612,7 @@ async function loadFiles() {
     updateIndexCounter()
   } catch {
     console.error('Error loading files')
+    indexLoadFailed = true
   }
 }
 
@@ -562,6 +622,7 @@ async function loadSettings() {
     console.log(`Loaded ${allSettings.length} settings`)
   } catch {
     console.error('Error loading settings')
+    indexLoadFailed = true
   }
 }
 
@@ -569,6 +630,8 @@ function filterResults(query: string): void {
   if (!query.trim()) {
     filteredResults = []
     calculationResult = null
+    // L'historique réapparaît : la sélection repart de sa première entrée
+    selectedIndex = 0
     return
   }
 
@@ -725,6 +788,74 @@ function filterResults(query: string): void {
 }
 
 function displayResults(): void {
+  renderResults()
+  syncListboxState()
+}
+
+/**
+ * Reflète la liste affichée dans la sémantique ARIA : chaque ligne devient
+ * une option du listbox, et le champ désigne l'option active, ce qui rend la
+ * navigation aux flèches perceptible par un lecteur d'écran.
+ */
+function syncListboxState(): void {
+  const items = resultsContainer.querySelectorAll<HTMLElement>('.result-item')
+  let activeId: string | null = null
+
+  items.forEach((item, index) => {
+    const isSelected = item.classList.contains('selected')
+    item.id = `result-option-${index}`
+    item.setAttribute('role', 'option')
+    item.setAttribute('aria-selected', String(isSelected))
+    if (isSelected) activeId = item.id
+  })
+
+  searchInput.setAttribute('aria-expanded', String(items.length > 0))
+  if (activeId) {
+    searchInput.setAttribute('aria-activedescendant', activeId)
+  } else {
+    searchInput.removeAttribute('aria-activedescendant')
+  }
+}
+
+/**
+ * Message affiché quand une recherche préfixée ne trouve rien. Sans lui, la
+ * liste disparaîtrait et l'absence de résultat se confondrait avec un
+ * chargement ou une frappe non prise en compte.
+ */
+function displayNoResults(query: string): void {
+  let title = `Aucun résultat pour « ${query} »`
+  let hint = 'Essayez un autre terme, ou F5 pour réindexer'
+
+  if (query.startsWith('>')) {
+    title = 'Saisissez une commande après « > »'
+    hint = 'Exemple : >htop'
+  } else if (query.includes(' to ')) {
+    title = 'Conversion non reconnue'
+    hint = 'Exemples : 10 km to mi, 32°c to f, 100 usd to eur'
+  } else if (query.startsWith('.')) {
+    title = 'Aucune application ne correspond'
+  } else if (query.startsWith('?')) {
+    title = 'Aucun fichier ne correspond'
+  }
+
+  const item = document.createElement('div')
+  item.className = 'result-item no-results'
+  item.setAttribute('aria-disabled', 'true')
+
+  const name = document.createElement('div')
+  name.className = 'no-results-title'
+  name.textContent = title
+
+  const description = document.createElement('div')
+  description.className = 'no-results-hint'
+  description.textContent = hint
+
+  item.appendChild(name)
+  item.appendChild(description)
+  resultsContainer.appendChild(item)
+}
+
+function renderResults(): void {
   resultsContainer.innerHTML = ''
 
   // Si c'est un calcul, afficher le résultat dans l'input. La liste reste
@@ -779,6 +910,8 @@ function displayResults(): void {
       selectedIndex = 0
     } else if (!query) {
       displayHistory()
+    } else {
+      displayNoResults(query)
     }
     return
   }
@@ -833,6 +966,8 @@ function displayResults(): void {
     const name = document.createElement('div')
     name.className = 'result-name'
     name.textContent = result.name
+    // Noms et chemins longs sont tronqués : l'infobulle rend le texte entier
+    name.title = result.name
 
     const description = document.createElement('div')
     description.className = 'result-description'
@@ -847,6 +982,7 @@ function displayResults(): void {
       description.textContent = result.description
     } else if (result.path) {
       description.textContent = result.path
+      description.title = result.path
     }
 
     info.appendChild(name)
@@ -857,9 +993,13 @@ function displayResults(): void {
 
     if (result.resultType === 'file') {
       const openButton = document.createElement('button')
+      openButton.type = 'button'
       openButton.className = 'open-file-btn'
-      openButton.innerHTML = '▶'
-      openButton.title = 'Ouvrir le fichier'
+      openButton.textContent = '▶'
+      openButton.title = 'Ouvrir le fichier (Maj+Entrée)'
+      openButton.setAttribute('aria-label', `Ouvrir le fichier ${result.name}`)
+      // Équivalent clavier : Maj+Entrée sur la ligne active
+      openButton.tabIndex = -1
       openButton.addEventListener('click', (e) => {
         e.stopPropagation()
         openResult(result, true)
@@ -873,11 +1013,13 @@ function displayResults(): void {
       if (toggleAction) {
         const toggleSwitch = document.createElement('label')
         toggleSwitch.className = 'toggle-switch'
-        toggleSwitch.title = toggleAction.name
+        toggleSwitch.title = `${toggleAction.name} (Maj+Entrée)`
 
         const checkbox = document.createElement('input')
         checkbox.type = 'checkbox'
         checkbox.className = 'toggle-checkbox'
+        checkbox.setAttribute('aria-label', toggleAction.name)
+        checkbox.tabIndex = -1
 
         const slider = document.createElement('span')
         slider.className = 'toggle-slider'
@@ -885,20 +1027,38 @@ function displayResults(): void {
         toggleSwitch.appendChild(checkbox)
         toggleSwitch.appendChild(slider)
 
-        window.electronAPI
-          .getSettingState(result.id ?? '')
-          .then((isEnabled) => {
-            checkbox.checked = isEnabled // checked = vert = activé, unchecked = gris = désactivé
-          })
-          .catch(() => {
-            console.error('Error loading setting state')
-          })
+        // checked = vert = activé, unchecked = gris = désactivé
+        const syncState = (): Promise<void> =>
+          window.electronAPI
+            .getSettingState(result.id ?? '')
+            .then((isEnabled) => {
+              checkbox.checked = isEnabled
+            })
+            .catch(() => {
+              console.error('Error loading setting state')
+            })
+
+        void syncState()
 
         toggleSwitch.addEventListener('click', (e) => {
           e.stopPropagation()
-          // Inverser immédiatement pour feedback visuel
-          checkbox.checked = !checkbox.checked
+          // L'interrupteur n'anticipe plus le résultat : une bascule échouée
+          // (nmcli ou rfkill absent, droits insuffisants) laissait affiché un
+          // état faux. L'état réel est relu une fois l'action exécutée.
+          e.preventDefault()
+          if (toggleSwitch.getAttribute('aria-busy') === 'true') return
+
+          toggleSwitch.setAttribute('aria-busy', 'true')
           window.electronAPI.executeSettingAction(result.id ?? '', 'toggle')
+
+          // L'action n'a pas de réponse directe : deux relectures couvrent une
+          // bascule rapide comme une radio qui met un instant à changer d'état.
+          setTimeout(() => {
+            void syncState()
+          }, 400)
+          setTimeout(() => {
+            void syncState().finally(() => toggleSwitch.removeAttribute('aria-busy'))
+          }, 1500)
         })
 
         item.appendChild(toggleSwitch)
@@ -995,9 +1155,12 @@ function openResult(result: SearchResult, forceOpenFile = false): void {
 }
 
 function selectItem(delta: number): void {
-  if (filteredResults.length === 0) return
+  // Le nombre de lignes navigables vient du DOM : l'historique affiché
+  // à champ vide ne passe pas par filteredResults.
+  const count = resultsContainer.querySelectorAll('.result-item:not([aria-disabled="true"])').length
+  if (count === 0) return
 
-  selectedIndex = (selectedIndex + delta + filteredResults.length) % filteredResults.length
+  selectedIndex = (selectedIndex + delta + count) % count
   displayResults()
 
   const selectedElement = resultsContainer.querySelector('.result-item.selected')
@@ -1006,9 +1169,90 @@ function selectItem(delta: number): void {
   }
 }
 
+/**
+ * Âge maximal de l'index côté interface, aligné sur le cache du processus
+ * principal (SCAN_CACHE_TTL). La fenêtre n'est jamais détruite : sans
+ * rechargement, une application installée ou un fichier créé après le
+ * démarrage restait introuvable jusqu'à F5.
+ */
+const INDEX_MAX_AGE_MS = 60_000
+
+/** Date du dernier chargement réussi de l'index. */
+let indexLoadedAt = 0
+
+/** Rechargement en cours, pour ne pas empiler les requêtes. */
+let indexRefresh: Promise<void> | null = null
+
+/**
+ * Recharge l'index s'il est périmé, sans afficher le compteur : l'opération
+ * est routinière et ne doit pas distraire à chaque ouverture.
+ */
+/**
+ * Versions des index actuellement chargés. Lues avant les données : si un
+ * scan aboutit entre les deux lectures, la version retenue est l'ancienne, et
+ * le changement sera rechargé au contrôle suivant plutôt que manqué.
+ */
+let loadedVersion: IndexVersion | null = null
+
+async function readIndexVersion(): Promise<IndexVersion | null> {
+  try {
+    return await window.electronAPI.getIndexVersion()
+  } catch {
+    return null
+  }
+}
+
+/**
+ * Recharge l'index s'il est périmé, sans afficher le compteur : l'opération
+ * est routinière et ne doit pas distraire à chaque ouverture. Seuls les index
+ * dont la version a changé sont transférés.
+ */
+function refreshIndexIfStale(): void {
+  if (indexRefresh || Date.now() - indexLoadedAt < INDEX_MAX_AGE_MS) return
+
+  indexRefresh = (async () => {
+    const version = await readIndexVersion()
+    const appsChanged = !version || version.applications !== loadedVersion?.applications
+    const filesChanged = !version || version.files !== loadedVersion?.files
+
+    const [applications, files] = await Promise.all([
+      appsChanged ? window.electronAPI.getApplications() : null,
+      filesChanged ? window.electronAPI.getFiles() : null
+    ])
+
+    if (applications) allApps = applications
+    if (files) allFiles = files
+    loadedVersion = version
+    indexLoadedAt = Date.now()
+    if (!applications && !files) return
+
+    // Ne rafraîchit l'affichage que si une recherche est en cours : la
+    // liste d'historique ne dépend pas de l'index.
+    if (searchInput.value.trim()) {
+      filterResults(searchInput.value)
+      displayResults()
+    }
+  })()
+    .catch(() => {
+      console.error('Index refresh failed')
+    })
+    .finally(() => {
+      indexRefresh = null
+    })
+}
+
 window.addEventListener('DOMContentLoaded', async () => {
   loadHistory()
+  setIndexStatus('Indexation…')
+  const version = await readIndexVersion()
   await Promise.all([loadApplications(), loadFiles(), loadSettings()])
+  if (!indexLoadFailed) {
+    indexLoadedAt = Date.now()
+    loadedVersion = version
+  }
+  if (indexLoadFailed) {
+    setIndexStatus('Index incomplet · F5 pour réessayer', 'error')
+  }
   displayResults() // Afficher l'historique au démarrage
   searchInput.focus()
 })
@@ -1016,6 +1260,7 @@ window.addEventListener('DOMContentLoaded', async () => {
 window.addEventListener('focus', () => {
   searchInput.focus()
   searchInput.select()
+  refreshIndexIfStale()
 })
 
 searchInput.addEventListener('input', () => {
@@ -1030,12 +1275,12 @@ searchInput.addEventListener('input', () => {
  * par une frappe accidentelle.
  */
 async function effacerDonneesLocales(): Promise<void> {
-  indexCounter.textContent = 'Effacement…'
+  setIndexStatus('Effacement…')
 
   try {
     const emplacements = await window.electronAPI.eraseLocalData()
     if (emplacements === null) {
-      indexCounter.textContent = ''
+      setIndexStatus('')
       return
     }
 
@@ -1050,10 +1295,10 @@ async function effacerDonneesLocales(): Promise<void> {
     searchInput.value = ''
     displayResults()
 
-    indexCounter.textContent = `${emplacements.length + 1} emplacements effacés`
+    setIndexStatus(`${emplacements.length + 1} emplacements effacés`)
   } catch {
     console.error("Échec de l'effacement")
-    indexCounter.textContent = "Échec de l'effacement"
+    setIndexStatus("Échec de l'effacement · Ctrl+Suppr pour réessayer", 'error')
   }
 }
 
@@ -1067,32 +1312,54 @@ searchInput.addEventListener('keydown', (event) => {
     // Réindexe applications et fichiers : utile après avoir installé un
     // logiciel, sans quoi il faut attendre l'expiration du cache.
     event.preventDefault()
-    indexCounter.textContent = 'Réindexation…'
+    setIndexStatus('Réindexation…')
 
     void window.electronAPI
       .refreshIndex()
       .then(({ applications, files }) => {
         allApps = applications
         allFiles = files
+        indexLoadFailed = false
+        indexLoadedAt = Date.now()
+        void readIndexVersion().then((version) => {
+          loadedVersion = version
+        })
         updateIndexCounter()
         filterResults(searchInput.value)
         displayResults()
       })
       .catch(() => {
         console.error('Échec de la réindexation')
-        indexCounter.textContent = ''
+        setIndexStatus('Échec de la réindexation · F5 pour réessayer', 'error')
       })
   } else if (event.key === 'Escape') {
     searchInput.value = ''
     filteredResults = []
     displayResults()
     window.electronAPI.hideWindow()
+  } else if (event.key === 'Delete' && !searchInput.value) {
+    // Champ vide : l'historique est affiché, Suppr retire l'entrée active
+    const selected = resultsContainer.querySelector('.history-item.selected')
+    if (selected) {
+      event.preventDefault()
+      removeFromHistory(selectedIndex)
+    }
   } else if (event.key === 'ArrowDown') {
     event.preventDefault()
     selectItem(1)
   } else if (event.key === 'ArrowUp') {
     event.preventDefault()
     selectItem(-1)
+  } else if (event.key === 'Enter' && event.shiftKey) {
+    // Action secondaire de la ligne active, équivalent clavier des contrôles
+    // qui n'apparaissent qu'au survol : ouvrir le fichier, basculer le paramètre.
+    event.preventDefault()
+    const selection = filteredResults[selectedIndex]
+    if (selection?.resultType === 'file') {
+      openResult(selection, true)
+    } else {
+      resultsContainer.querySelector<HTMLElement>('.result-item.selected .toggle-checkbox')?.click()
+    }
   } else if (event.key === 'Enter') {
     event.preventDefault()
     if (calculationResult !== null) {
@@ -1107,6 +1374,9 @@ searchInput.addEventListener('keydown', (event) => {
       if (selection) openResult(selection)
     } else if (searchInput.value.trim()) {
       openGoogleSearch(searchInput.value)
+    } else {
+      // Champ vide : rouvrir l'entrée d'historique sélectionnée
+      resultsContainer.querySelector<HTMLElement>('.history-item.selected')?.click()
     }
   }
 })

@@ -100,19 +100,15 @@ test('sémantique de base et parcours clavier', async ({ mainWindow, pageErrors 
     if ((await results.count()) >= 2) {
       await input.press('ArrowDown')
       await expect(results.nth(1)).toHaveClass(/selected/)
+      // La sélection aux flèches est exposée au lecteur d'écran
+      await expect(results.nth(1)).toHaveAttribute('aria-selected', 'true')
+      const activeId = await results.nth(1).getAttribute('id')
+      await expect(input).toHaveAttribute('aria-activedescendant', activeId ?? '')
+      await expect(input).toHaveAttribute('aria-expanded', 'true')
     }
 
     await input.press('Escape')
     await expect(input).toHaveValue('')
-
-    // Le bouton de suppression d'historique n'est atteignable qu'à la
-    // souris : c'est un manque connu, consigné dans les findings.
-    findings.push({
-      element: '.delete-history-btn',
-      problem: "La suppression d'une entrée d'historique n'est pas accessible au clavier",
-      severity: 'mineure',
-      recommendation: "Gérer une touche (Suppr) sur l'entrée sélectionnée de l'historique"
-    })
   })
 
   fs.writeFileSync(path.join(QA_DIR, 'a11y.json'), JSON.stringify(findings, null, 2))
