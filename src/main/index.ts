@@ -89,8 +89,10 @@ process.on('uncaughtException', (error: Error) => {
   exitAfterFatalError('Exception non rattrapée :', error)
 })
 
-process.on('unhandledRejection', () => {
-  console.error('Promesse rejetée sans gestionnaire')
+process.on('unhandledRejection', (reason) => {
+  // La raison est indispensable au diagnostic : sans elle, une panne du
+  // démarrage n'a laissé aucune trace exploitable dans le journal de session.
+  console.error('Promesse rejetée sans gestionnaire :', reason)
 })
 
 app.on('render-process-gone', (_event, _webContents, details) => {
@@ -119,9 +121,11 @@ void app.whenReady().then(async () => {
 
   registerIpcHandlers()
 
-  await setupAutoLaunch()
-  setupAutoUpdates()
-
+  // Le raccourci est la raison d'être de l'application : il s'enregistre avant
+  // les intégrations accessoires (autostart, mises à jour), pour qu'aucune de
+  // leurs pannes ne puisse le neutraliser — c'est arrivé : une exception de
+  // l'updater rejetait cette chaîne avant `register()`, et Alt+Space restait
+  // mort dans chaque build installée alors que dev et tests étaient verts.
   if (globalShortcut.register(GLOBAL_SHORTCUT, () => void toggleWindow())) {
     // `register()` renvoie `true` sans garantir que le compositeur délivrera la
     // touche : sous Wayland sans portail, l'enregistrement est un leurre. On
@@ -131,6 +135,14 @@ void app.whenReady().then(async () => {
     )
   } else {
     console.error(`Échec de l'enregistrement du raccourci ${GLOBAL_SHORTCUT}`)
+  }
+
+  await setupAutoLaunch()
+
+  try {
+    setupAutoUpdates()
+  } catch {
+    console.error('Initialisation des mises à jour impossible')
   }
 
   // Sur macOS, recréer la fenêtre si l'icône du dock est cliquée

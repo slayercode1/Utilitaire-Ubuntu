@@ -4,8 +4,11 @@ import fs from 'node:fs'
 import path from 'node:path'
 
 import { app, dialog } from 'electron'
-import type { AppUpdater, UpdateInfo } from 'electron-updater'
-import electronUpdater from 'electron-updater'
+// `autoUpdater` doit être importé en export nommé : le paquet CommonJS marque
+// `__esModule` sans fournir d'export `default`, si bien qu'un import par défaut
+// vaut `undefined` à l'exécution dans les builds empaquetées — et uniquement
+// là, puisque `setupAutoUpdates` sort avant d'y toucher hors paquet.
+import { type AppUpdater, autoUpdater, type UpdateInfo } from 'electron-updater'
 
 import {
   canUseAutomaticUpdates,
@@ -17,12 +20,6 @@ let firstCheckTimer: NodeJS.Timeout | null = null
 let periodicCheckTimer: NodeJS.Timeout | null = null
 let updaterConfigured = false
 let installRequested = false
-
-function getUpdater(): AppUpdater {
-  // Le paquet expose une API CommonJS ; cet accès reste compatible avec la
-  // compilation Node16 du processus principal.
-  return electronUpdater.autoUpdater
-}
 
 function updateConfigExists(): boolean {
   return fs.existsSync(path.join(process.resourcesPath, 'app-update.yml'))
@@ -76,7 +73,7 @@ export function setupAutoUpdates(): void {
     return
   }
 
-  const updater = getUpdater()
+  const updater = autoUpdater
   updaterConfigured = true
   updater.autoDownload = true
   updater.autoInstallOnAppQuit = true
