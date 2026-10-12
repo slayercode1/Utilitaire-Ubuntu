@@ -31,6 +31,10 @@ jobs:
     env:
       RELEASE_TAG: ''
       CERTIFICATE_IDENTITY: https://github.com/${{ github.repository }}/.github/workflows/release.yml@${{ github.ref }}
+      # Publication Snap Store : active seulement une fois le secret créé
+      # (snapcraft export-login --snaps finder --acls package_upload -).
+      SNAPCRAFT_STORE_CREDENTIALS: ${{ secrets.SNAPCRAFT_STORE_CREDENTIALS }}
+      SNAP_CHANNEL: ${{ vars.SNAP_CHANNEL || 'edge' }}
 
     steps:
       - name: Extraire les sources
@@ -59,6 +63,22 @@ jobs:
 
       - name: Tester et construire les artefacts auto-actualisables
         run: npm run verify && npm run release:linux
+
+      - name: Construire le snap
+        if: env.SNAPCRAFT_STORE_CREDENTIALS != ''
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends squashfs-tools
+          sh scripts/build-snap.sh
+
+      - name: Publier sur le Snap Store
+        if: env.SNAPCRAFT_STORE_CREDENTIALS != ''
+        # Un refus ou une revue manuelle du Store ne doit pas bloquer la
+        # release GitHub, dont dépendent les mises à jour .deb et AppImage.
+        continue-on-error: true
+        run: |
+          sudo snap install snapcraft --classic
+          snapcraft upload --release="$SNAP_CHANNEL" out/snap/*.snap
 
       - name: Préparer les artefacts, métadonnées et checksums
         run: |

@@ -16,6 +16,26 @@
 import { spawn } from 'node:child_process'
 
 /**
+ * Variables posées par snapd pour Finder lui-même (SNAP, SNAP_NAME,
+ * SNAP_USER_DATA…). Transmises aux applications lancées, elles leur feraient
+ * croire qu'elles s'exécutent dans le snap de Finder : certaines désactivent
+ * alors leur propre mise à jour ou déplacent leurs données.
+ */
+const SNAP_VARIABLE = /^SNAP($|_)/
+
+/**
+ * Environnement à transmettre à une application de l'hôte : celui de Finder,
+ * sans les variables propres à son paquet snap.
+ */
+export function hostEnvironment(environment: NodeJS.ProcessEnv): NodeJS.ProcessEnv {
+  if (!environment['SNAP']) return environment
+
+  return Object.fromEntries(
+    Object.entries(environment).filter(([name]) => !SNAP_VARIABLE.test(name))
+  )
+}
+
+/**
  * Lance un processus détaché du parent.
  *
  * @param args - Programme puis arguments, déjà séparés
@@ -38,6 +58,7 @@ export function launchDetachedProcess(
       const child = spawn(command, commandArgs, {
         detached: true,
         stdio: 'ignore',
+        env: hostEnvironment(process.env),
         // Critique : sans shell, les arguments ne sont jamais réinterprétés
         shell: false
       })

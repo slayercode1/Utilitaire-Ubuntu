@@ -12,6 +12,30 @@ export function acquireSingleInstanceLock(): boolean {
 }
 
 /**
+ * Commande à inscrire dans l'entrée d'autostart.
+ *
+ * - AppImage : l'exécutable rapporté est le point de montage éphémère
+ *   (/tmp/.mount_…) ; seul $APPIMAGE survit au redémarrage.
+ * - Snap : l'exécutable vit sous /snap/<nom>/<révision>/, chemin qui disparaît
+ *   au rafraîchissement suivant ; /snap/bin/<nom> désigne toujours la
+ *   révision courante et prépare l'environnement du snap.
+ */
+export function resolveAutostartCommand(
+  environment: NodeJS.ProcessEnv,
+  executablePath: string
+): string {
+  const snapName = environment['SNAP_INSTANCE_NAME'] || environment['SNAP_NAME']
+  if (environment['SNAP'] && snapName && /^[a-z0-9][a-z0-9_-]*$/.test(snapName)) {
+    return `/snap/bin/${snapName}`
+  }
+
+  const appImagePath = environment['APPIMAGE']
+  if (appImagePath && path.isAbsolute(appImagePath)) return appImagePath
+
+  return executablePath
+}
+
+/**
  * Crée atomiquement l'entrée XDG d'autostart dans le profil courant.
  * Aucun script d'installation root ne touche au HOME de l'utilisateur.
  */
@@ -22,11 +46,7 @@ export async function setupAutoLaunch(): Promise<void> {
   }
 
   try {
-    // Sous AppImage, l'exécutable rapporté est le point de montage éphémère
-    // (/tmp/.mount_…) ; seul $APPIMAGE survit au redémarrage.
-    const appImagePath = process.env['APPIMAGE']
-    const executablePath =
-      appImagePath && path.isAbsolute(appImagePath) ? appImagePath : app.getPath('exe')
+    const executablePath = resolveAutostartCommand(process.env, app.getPath('exe'))
 
     const configuredRoot = process.env['XDG_CONFIG_HOME']
     const configRoot =

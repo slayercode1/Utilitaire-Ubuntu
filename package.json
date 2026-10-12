@@ -31,6 +31,7 @@
     "package": "npm run build && electron-builder --linux --dir",
     "dist:linux": "npm run build && electron-builder --linux",
     "release:linux": "npm run build && electron-builder --linux AppImage deb --publish never",
+    "snap": "npm run package && sh scripts/build-snap.sh",
     "build": "tsc && tsc -p tsconfig.renderer.json && tsc -p tsconfig.scripts.json && node dist-scripts/check-strict-types.js && node dist-scripts/copy-assets.js"
   },
   "keywords": [
@@ -112,12 +113,6 @@
           "arch": [
             "x64"
           ]
-        },
-        {
-          "target": "snap",
-          "arch": [
-            "x64"
-          ]
         }
       ],
       "icon": "icons",
@@ -138,18 +133,6 @@
       "afterRemove": "postrm.sh",
       "packageCategory": "utils",
       "priority": "optional"
-    },
-    "snapcraft": {
-      "base": "core22",
-      "core22": {
-        "summary": "Application de recherche type Spotlight pour Linux",
-        "confinement": "classic",
-        "grade": "stable",
-        "allowNativeWayland": true,
-        "stagePackages": [
-          "default"
-        ]
-      }
     }
   },
   "dependencies": {
