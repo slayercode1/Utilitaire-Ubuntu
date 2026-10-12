@@ -12,6 +12,8 @@ on:
       - '**/*.md'
       - '.github/workflows/pages.yml'
       - '.github/workflows/ci.yml'
+      # Tests du site vitrine : ils ne changent rien à l'application livrée
+      - 'tests/e2e/site.spec.ts'
 
 concurrency:
   group: release-main
