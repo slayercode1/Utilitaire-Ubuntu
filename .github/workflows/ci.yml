@@ -60,10 +60,15 @@ jobs:
       - name: Installer le serveur X virtuel
         run: sudo apt-get update && sudo apt-get install -y --no-install-recommends xvfb
 
+      # Les tests du site vitrine (tests/e2e/site.spec.ts) pilotent Chromium,
+      # en plus de l'application Electron.
+      - name: Installer Chromium pour les tests du site
+        run: npx playwright install --with-deps chromium
+
       - name: Construire l'application
         run: npm run build
 
-      - name: Tests E2E Electron
+      - name: Tests E2E (application et site)
         run: xvfb-run --auto-servernum --server-args="-screen 0 1920x1080x24" npm run test:e2e
 
       - name: Conserver les rapports en cas d'échec
