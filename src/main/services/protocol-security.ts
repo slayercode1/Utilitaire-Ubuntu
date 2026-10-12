@@ -11,7 +11,8 @@ const RENDERER_ASSETS = new Set([
   '/styles.css',
   '/main.js',
   '/features/conversion/convert-units.js',
-  '/features/conversion/evaluate-math.js'
+  '/features/conversion/evaluate-math.js',
+  '/features/search/fold.js'
 ])
 
 const MEDIA_EXTENSIONS = new Set([

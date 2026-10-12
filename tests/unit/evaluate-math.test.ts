@@ -49,3 +49,41 @@ describe('isMathExpression — dates saisies comme recherche', () => {
     expect(isMathExpression(query)).toBe(true)
   })
 })
+
+describe('evaluateMath — grands résultats', () => {
+  it('ne transforme pas un grand résultat fini en Infinity', () => {
+    const result = evaluateMath('2^1000')
+    expect(result).not.toBeNull()
+    expect(Number.isFinite(result)).toBe(true)
+    expect(result).toBeCloseTo(2 ** 1000, -290)
+  })
+
+  it('arrondit toujours les petits résultats', () => {
+    expect(evaluateMath('0.1+0.2')).toBe(0.3)
+  })
+})
+
+describe('evaluateMath — écritures courantes', () => {
+  it.each([
+    ['3 x 4', 12],
+    ['3 X 4', 12],
+    ['3×4', 12],
+    ['12÷4', 3],
+    ['2**3', 8],
+    ['= 2+2', 4],
+    ['(1+2) x 3', 9]
+  ])('%s vaut %s', (expression, expected) => {
+    expect(isMathExpression(expression)).toBe(true)
+    expect(evaluateMath(expression)).toBe(expected)
+  })
+
+  it('laisse une résolution d’image chercher ses fichiers', () => {
+    expect(isMathExpression('1920x1080')).toBe(false)
+    expect(isMathExpression('wallpaper 1920x1080')).toBe(false)
+  })
+
+  it('ne prend pas un mot contenant x pour une multiplication', () => {
+    expect(isMathExpression('xterm')).toBe(false)
+    expect(isMathExpression('3 xterm')).toBe(false)
+  })
+})

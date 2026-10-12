@@ -389,14 +389,27 @@ d'analyse d'usage. Aucune dépendance tierce de collecte n'est embarquée.
 L'index des fichiers ne quitte jamais la mémoire : il n'est écrit sur aucun
 disque et disparaît à la fermeture.
 
-### Seul flux sortant
+### Flux sortants
 
-La recherche web (préfixe `??`, ou absence de résultat local) ouvre votre
-navigateur par défaut sur Google avec la requête saisie. **Elle n'est déclenchée
-que par une action explicite.** L'URL est construite par le processus principal
-à partir de la seule requête, jamais par l'interface.
+Finder n'envoie ni vos fichiers, ni votre index, ni votre historique. Deux
+situations le font communiquer avec l'extérieur :
 
-Aucune autre donnée ne sort de votre poste.
+1. **Recherche web.** Le préfixe `??`, ou Entrée quand aucun résultat local ne
+   correspond, ouvre votre navigateur par défaut sur Google avec le texte saisi.
+   Google reçoit donc ce texte : évitez d'y taper une information sensible.
+   L'URL est construite par le processus principal à partir de la seule requête,
+   jamais par l'interface.
+2. **Vérification des mises à jour** (paquets `.deb` et AppImage uniquement ;
+   Snap et Flatpak passent par leur propre magasin). Finder interroge les
+   releases GitHub du projet 15 secondes après le démarrage, puis toutes les
+   4 heures, et télécharge la nouvelle version avec ses sommes de contrôle et
+   sa preuve de signature. Pour vérifier cette signature, la bibliothèque
+   Sigstore récupère sa racine de confiance publique auprès de l'infrastructure
+   Sigstore, puis la garde en cache dans le dossier de Finder. Ces services
+   voient votre adresse IP, la version de Finder et l'agent HTTP, comme pour
+   tout téléchargement ; aucune autre donnée n'est transmise.
+
+Aucune mesure d'audience, aucun rapport de plantage n'est envoyé.
 
 ### Effacer vos données
 

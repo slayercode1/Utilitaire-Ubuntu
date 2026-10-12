@@ -160,6 +160,10 @@ test('snippets web et commande : proposés sans être déclenchés', async ({
   await test.step('requête introuvable : repli Google', async () => {
     await naturalFill(mainWindow, input, 'zzzqqqxyzzw')
     await expect(mainWindow.locator('.google-search')).toBeVisible()
+    // Envoyer la saisie à Google demande un choix explicite : jamais présélectionné
+    await expect(mainWindow.locator('.google-search')).not.toHaveClass(/selected/)
+    await input.press('ArrowDown')
+    await expect(mainWindow.locator('.google-search')).toHaveClass(/selected/)
     await mainWindow.screenshot({
       path: path.join(SCREENSHOTS, '06-web-fallback-600x500.png')
     })

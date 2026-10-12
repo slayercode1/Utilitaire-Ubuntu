@@ -11,13 +11,14 @@
   --surface-raised: 255 255 255;
 
   /* Texte : la hiérarchie repose sur l'opacité, pas sur la teinte.
-     Sur la surface sombre, 0.52 est le plancher qui garantit un contraste
-     de 4.5:1 (WCAG AA) aux petits textes ; aucun texte lisible ne descend
-     en dessous. */
+     0.6 est le plancher qui garantit 4.5:1 (WCAG AA) aux petits textes,
+     y compris sur la ligne sélectionnée et quand la fenêtre translucide
+     passe devant un bureau clair ; aucun texte lisible ne descend en
+     dessous. */
   --text-primary: 255 255 255;
   --text-strong: 0.94;
   --text-muted: 0.64;
-  --text-faint: 0.52;
+  --text-faint: 0.6;
 
   /* Accent unique, réservé à la sélection et au focus */
   --accent: 122 162 255;
@@ -219,6 +220,17 @@ body {
    c'est le seul endroit où l'accent apparaît. */
 .result-item.selected {
   background: rgb(var(--accent) / 0.14);
+  /* Le fond seul est trop proche de la surface (WCAG 1.4.11) : une barre
+     pleine signale la ligne active, y compris pour la navigation clavier. */
+  box-shadow: inset 3px 0 0 rgb(var(--accent));
+}
+
+/* Indication d'activation d'un repli non présélectionné */
+.result-hint {
+  margin-left: auto;
+  flex-shrink: 0;
+  color: rgb(var(--text-primary) / var(--text-faint));
+  font-size: 12px;
 }
 
 .result-icon {

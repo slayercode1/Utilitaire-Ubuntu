@@ -20,12 +20,33 @@ const WHITESPACE = /\s/g
  */
 const DATE_LIKE = /^\d{1,4}([-/.])\d{1,2}\1\d{1,4}$/
 
+/** « 3 x 4 » : le x n'est une multiplication qu'entouré d'espaces. */
+const SPACED_TIMES = /(?<=[\d)])\s+[xX]\s+(?=[\d(.])/g
+
+/**
+ * Ramène les écritures courantes à la syntaxe de l'analyseur : signes
+ * de calculatrice (× ÷), puissance de programmeur (**), « = » initial de
+ * tableur et « x » espacé.
+ *
+ * « 1920x1080 » reste du texte : collé, c'est presque toujours un nom de
+ * fichier (résolution d'image), pas une multiplication.
+ */
+export function normalizeMathInput(str: string): string {
+  return str
+    .trim()
+    .replace(/^=\s*/, '')
+    .replace(/×/g, '*')
+    .replace(/÷/g, '/')
+    .replace(/\*\*/g, '^')
+    .replace(SPACED_TIMES, '*')
+}
+
 /**
  * Une expression est mathématique si elle ne contient que des caractères
  * autorisés, au moins un opérateur et au moins un chiffre.
  */
 export function isMathExpression(str: string): boolean {
-  const cleaned = str.trim()
+  const cleaned = normalizeMathInput(str)
 
   if (DATE_LIKE.test(cleaned)) return false
 
@@ -36,7 +57,7 @@ export function isMathExpression(str: string): boolean {
 
 export function evaluateMath(expression: string): number | null {
   try {
-    const cleaned = expression.trim().replace(WHITESPACE, '')
+    const cleaned = normalizeMathInput(expression).replace(WHITESPACE, '')
 
     if (!VALID_CLEANED_EXPRESSION.test(cleaned)) {
       return null
@@ -45,7 +66,10 @@ export function evaluateMath(expression: string): number | null {
     const result = parseExpression(cleaned)
 
     if (typeof result === 'number' && !Number.isNaN(result) && Number.isFinite(result)) {
-      // Arrondir à 10 décimales pour éviter les problèmes de précision
+      // Arrondir à 10 décimales pour éviter les problèmes de précision.
+      // Au-delà de 1e15, il n'y a plus de décimales à arrondir, et multiplier
+      // par 1e10 ferait déborder un grand résultat fini en Infinity.
+      if (Math.abs(result) >= 1e15) return result
       return Math.round(result * 10000000000) / 10000000000
     }
 

@@ -1,3 +1,4 @@
+import fs from 'node:fs'
 import path from 'node:path'
 import { describe, expect, it } from 'vitest'
 import {
@@ -69,5 +70,24 @@ describe('protocole applicatif', () => {
     expect(isIndexedMediaPath('/home/alice/Images/notes.txt', [application], [image])).toBe(false)
     expect(isSupportedMediaPath('/tmp/image.SVG')).toBe(true)
     expect(isSupportedMediaPath('/tmp/image.html')).toBe(false)
+  })
+})
+
+describe('modules de l’interface servis par le protocole', () => {
+  // Un module d'interface absent de la liste blanche n'est jamais servi : tout
+  // le renderer échoue à charger. Ce test lie la liste aux sources réelles.
+  const rendererSources = path.resolve(__dirname, '../../src/renderer')
+
+  const collectModules = (directory: string): string[] =>
+    fs.readdirSync(directory, { withFileTypes: true }).flatMap((entry) => {
+      const absolute = path.join(directory, entry.name)
+      if (entry.isDirectory()) return collectModules(absolute)
+      if (!entry.name.endsWith('.ts') || entry.name.endsWith('.d.ts')) return []
+      return [path.relative(rendererSources, absolute).replace(/\.ts$/, '.js')]
+    })
+
+  it.each(collectModules(rendererSources))('sert %s', (modulePath) => {
+    const url = `${APP_RENDERER_URL.replace(/index\.html$/, '')}${modulePath.split(path.sep).join('/')}`
+    expect(resolveRendererAsset(url, rendererRoot)).toBe(path.join(rendererRoot, modulePath))
   })
 })

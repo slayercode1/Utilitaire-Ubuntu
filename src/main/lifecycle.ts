@@ -5,7 +5,7 @@ import fs from 'node:fs/promises'
 import path from 'node:path'
 import { app } from 'electron'
 
-import { quoteDesktopExecArgument } from './services/desktop-entry.js'
+import { isAutostartEntryDisabled, quoteDesktopExecArgument } from './services/desktop-entry.js'
 
 export function acquireSingleInstanceLock(): boolean {
   return app.requestSingleInstanceLock()
@@ -36,7 +36,9 @@ export function resolveAutostartCommand(
 }
 
 /**
- * Crée atomiquement l'entrée XDG d'autostart dans le profil courant.
+ * Crée atomiquement l'entrée XDG d'autostart dans le profil courant, ou la
+ * met à jour (chemin de l'exécutable) tant qu'elle reste active. Une entrée
+ * que l'utilisateur a désactivée n'est jamais réécrite : son choix prime.
  * Aucun script d'installation root ne touche au HOME de l'utilisateur.
  */
 export async function setupAutoLaunch(): Promise<void> {
@@ -71,6 +73,13 @@ export async function setupAutoLaunch(): Promise<void> {
       'X-GNOME-Autostart-enabled=true',
       ''
     ].join('\n')
+
+    // Désactivé depuis les réglages du bureau : on ne réactive pas en douce
+    const existing = await fs.readFile(target, 'utf8').catch(() => null)
+    if (existing !== null && isAutostartEntryDisabled(existing)) {
+      console.log("Auto-launch désactivé par l'utilisateur : entrée conservée")
+      return
+    }
 
     await fs.mkdir(autostartDir, { recursive: true, mode: 0o700 })
 

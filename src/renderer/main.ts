@@ -12,6 +12,7 @@
 import type { IndexVersion, RuntimeValue } from '../shared/types.js'
 import { tryConversion } from './features/conversion/convert-units.js'
 import { evaluateMath, isMathExpression } from './features/conversion/evaluate-math.js'
+import { foldForSearch } from './features/search/fold.js'
 
 /** Construit une URL média sur la même origine applicative que le document. */
 function createMediaUrl(filePath: string): string {
@@ -75,6 +76,12 @@ let allFiles: SearchResult[] = []
 let allSettings: SearchResult[] = []
 let filteredResults: SearchResult[] = []
 let selectedIndex = 0
+/**
+ * Le repli « Rechercher sur Google » envoie la saisie à un tiers : il n'est
+ * jamais présélectionné, l'utilisateur doit le choisir (↓, ↑ ou clic).
+ * Remis à zéro à chaque nouvelle saisie.
+ */
+let webFallbackSelected = false
 let calculationResult: number | string | null = null
 let searchHistory: HistoryEntry[] = []
 
@@ -231,6 +238,8 @@ function displayHistory(): void {
 
     const icon = document.createElement('img')
     icon.className = 'result-icon'
+    // Icône décorative : le nom du résultat est lu juste à côté
+    icon.alt = ''
     icon.src = getHistoryIcon()
 
     const info = document.createElement('div')
@@ -627,6 +636,7 @@ async function loadSettings() {
 }
 
 function filterResults(query: string): void {
+  webFallbackSelected = false
   if (!query.trim()) {
     filteredResults = []
     calculationResult = null
@@ -705,7 +715,8 @@ function filterResults(query: string): void {
   calculationResult = null
 
   // === SNIPPET: "." - Applications uniquement ===
-  let lowerQuery = query.toLowerCase()
+  // Espaces autour, casse et accents ne changent pas ce que l'on cherche
+  let lowerQuery = foldForSearch(query.trim())
   let searchAppsOnly = false
   let searchFilesOnly = false
 
@@ -725,14 +736,14 @@ function filterResults(query: string): void {
     const apps = allApps
       .filter((app) => {
         return (
-          app.name.toLowerCase().includes(lowerQuery) ||
-          app.description?.toLowerCase().includes(lowerQuery)
+          foldForSearch(app.name).includes(lowerQuery) ||
+          (app.description !== undefined && foldForSearch(app.description).includes(lowerQuery))
         )
       })
       .map((app) => ({
         ...app,
         resultType: 'app',
-        score: app.name.toLowerCase().startsWith(lowerQuery) ? 2 : 1
+        score: foldForSearch(app.name).startsWith(lowerQuery) ? 2 : 1
       }))
     results.push(...apps)
   }
@@ -740,12 +751,12 @@ function filterResults(query: string): void {
   if (!searchAppsOnly) {
     const files = allFiles
       .filter((file) => {
-        return file.name.toLowerCase().includes(lowerQuery)
+        return foldForSearch(file.name).includes(lowerQuery)
       })
       .map((file) => ({
         ...file,
         resultType: 'file',
-        score: file.name.toLowerCase().startsWith(lowerQuery) ? 2 : 1
+        score: foldForSearch(file.name).startsWith(lowerQuery) ? 2 : 1
       }))
     results.push(...files)
   }
@@ -754,16 +765,16 @@ function filterResults(query: string): void {
     const settings = allSettings
       .filter((setting) => {
         return (
-          setting.name.toLowerCase().includes(lowerQuery) ||
-          (setting.keywords ?? []).some((kw) => kw.toLowerCase().includes(lowerQuery))
+          foldForSearch(setting.name).includes(lowerQuery) ||
+          (setting.keywords ?? []).some((kw) => foldForSearch(kw).includes(lowerQuery))
         )
       })
       .map((setting) => ({
         ...setting,
         resultType: 'setting',
-        score: setting.name.toLowerCase().startsWith(lowerQuery)
+        score: foldForSearch(setting.name).startsWith(lowerQuery)
           ? 3
-          : (setting.keywords ?? []).some((kw) => kw.toLowerCase().startsWith(lowerQuery))
+          : (setting.keywords ?? []).some((kw) => foldForSearch(kw).startsWith(lowerQuery))
             ? 2.5
             : 1
       }))
@@ -834,6 +845,10 @@ function displayNoResults(query: string): void {
     hint = 'Exemples : 10 km to mi, 32°c to f, 100 usd to eur'
   } else if (query.startsWith('.')) {
     title = 'Aucune application ne correspond'
+  } else if (query.startsWith('??')) {
+    // « ?? » est la recherche web : il manque le texte, pas un fichier
+    title = 'Saisissez votre recherche après « ?? »'
+    hint = 'Exemple : ??météo Paris'
   } else if (query.startsWith('?')) {
     title = 'Aucun fichier ne correspond'
   }
@@ -879,10 +894,12 @@ function renderResults(): void {
 
     if (query && !isSnippet) {
       const googleItem = document.createElement('div')
-      googleItem.className = 'result-item google-search selected'
+      googleItem.className = 'result-item google-search' + (webFallbackSelected ? ' selected' : '')
 
       const icon = document.createElement('img')
       icon.className = 'result-icon'
+      // Icône décorative : le nom du résultat est lu juste à côté
+      icon.alt = ''
       icon.src = getGoogleIcon()
 
       const info = document.createElement('div')
@@ -902,12 +919,19 @@ function renderResults(): void {
       googleItem.appendChild(icon)
       googleItem.appendChild(info)
 
+      // Sans sélection, on indique comment l'activer plutôt que d'agir à la place
+      if (!webFallbackSelected) {
+        const hint = document.createElement('span')
+        hint.className = 'result-hint'
+        hint.textContent = '↓ puis Entrée'
+        googleItem.appendChild(hint)
+      }
+
       googleItem.addEventListener('click', () => {
         openGoogleSearch(searchInput.value)
       })
 
       resultsContainer.appendChild(googleItem)
-      selectedIndex = 0
     } else if (!query) {
       displayHistory()
     } else {
@@ -922,6 +946,8 @@ function renderResults(): void {
 
     const icon = document.createElement('img')
     icon.className = 'result-icon'
+    // Icône décorative : le nom du résultat est lu juste à côté
+    icon.alt = ''
 
     if (result.resultType === 'app') {
       if (result.iconPath) {
@@ -1160,6 +1186,13 @@ function selectItem(delta: number): void {
   const count = resultsContainer.querySelectorAll('.result-item:not([aria-disabled="true"])').length
   if (count === 0) return
 
+  // Seul le repli web est affiché : les flèches le sélectionnent explicitement
+  if (resultsContainer.querySelector('.google-search')) {
+    webFallbackSelected = true
+    displayResults()
+    return
+  }
+
   selectedIndex = (selectedIndex + delta + count) % count
   displayResults()
 
@@ -1372,7 +1405,7 @@ searchInput.addEventListener('keydown', (event) => {
     } else if (filteredResults.length > 0 && selectedIndex >= 0) {
       const selection = filteredResults[selectedIndex]
       if (selection) openResult(selection)
-    } else if (searchInput.value.trim()) {
+    } else if (searchInput.value.trim() && webFallbackSelected) {
       openGoogleSearch(searchInput.value)
     } else {
       // Champ vide : rouvrir l'entrée d'historique sélectionnée

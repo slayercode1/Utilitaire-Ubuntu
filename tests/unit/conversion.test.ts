@@ -8,11 +8,33 @@
 
 import { describe, expect, it } from 'vitest'
 
-import { tryConversion } from '../../src/renderer/features/conversion/convert-units.js'
+import {
+  FIXED_RATE_NOTICE,
+  tryConversion
+} from '../../src/renderer/features/conversion/convert-units.js'
 import {
   evaluateMath,
   isMathExpression
 } from '../../src/renderer/features/conversion/evaluate-math.js'
+
+describe('tryConversion — devises', () => {
+  it('signale que le taux est figé', () => {
+    expect(tryConversion('100 usd to eur')?.description).toBe(
+      `100 USD = 92 EUR · ${FIXED_RATE_NOTICE}`
+    )
+  })
+
+  it('ne l’ajoute pas aux unités physiques', () => {
+    expect(tryConversion('100 cm to m')?.description).not.toContain(FIXED_RATE_NOTICE)
+  })
+})
+
+describe('tryConversion — valeurs négatives', () => {
+  it('convertit une température négative', () => {
+    expect(tryConversion('-5 c to f')?.result).toBe('23 F')
+    expect(tryConversion('-40 c to f')?.result).toBe('-40 F')
+  })
+})
 
 describe('tryConversion — longueurs', () => {
   it('convertit les centimètres en mètres', () => {

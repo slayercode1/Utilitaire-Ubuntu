@@ -224,6 +224,16 @@ export function registerIpcHandlers(): void {
 
     if (!validCommand || !window) {
       console.error('Invalid or dangerous command blocked')
+      // Une commande réellement saisie mérite une explication plutôt qu'un silence
+      if (typeof command === 'string' && command.trim().length > 0) {
+        reportLaunchFailure(
+          'Commande non exécutée',
+          'Finder refuse les commandes de plus de 1 000 caractères et celles jugées ' +
+            'destructrices ou risquées : effacement du système, formatage de disque, ' +
+            'script téléchargé puis exécuté, écoute réseau. Si vous êtes sûr de vous, ' +
+            'lancez-la directement dans un terminal.'
+        )
+      }
       return
     }
 

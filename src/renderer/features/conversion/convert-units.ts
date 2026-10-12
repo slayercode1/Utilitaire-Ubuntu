@@ -607,8 +607,17 @@ const FACTOR_INDEX: ReadonlyMap<string, ConversionFactor> = (() => {
   return index
 })()
 
-/** Reconnaît « valeur unité_source to unité_cible » ; compilée une seule fois. */
-const CONVERSION_QUERY = /^([\d.,]+)\s*([a-zA-Z€$£¥°%]+)\s+to\s+([a-zA-Z€$£¥°%]+)$/i
+/** Unités monétaires : leurs taux sont figés dans la table ci-dessus. */
+const CURRENCY_UNITS: ReadonlySet<string> = new Set(Object.keys(CONVERSIONS['currencies'] ?? {}))
+
+/** Rappelé sous chaque conversion de devises, pour ne pas laisser croire à un cours réel. */
+export const FIXED_RATE_NOTICE = 'taux indicatif figé, pas un cours en temps réel'
+
+/**
+ * Reconnaît « valeur unité_source to unité_cible » ; compilée une seule fois.
+ * Le signe moins est accepté : « -5 c to f » est une demande courante.
+ */
+const CONVERSION_QUERY = /^(-?[\d.,]+)\s*([a-zA-Z€$£¥°%]+)\s+to\s+([a-zA-Z€$£¥°%]+)$/i
 
 export function tryConversion(query: string): ConversionResult | null {
   const match = query.match(CONVERSION_QUERY)
@@ -642,6 +651,8 @@ export function tryConversion(query: string): ConversionResult | null {
 
   return {
     result: `${formattedResult} ${toUnit.toUpperCase()}`,
-    description: `${value} ${fromUnit.toUpperCase()} = ${formattedResult} ${toUnit.toUpperCase()}`
+    description:
+      `${value} ${fromUnit.toUpperCase()} = ${formattedResult} ${toUnit.toUpperCase()}` +
+      (CURRENCY_UNITS.has(fromUnit) ? ` · ${FIXED_RATE_NOTICE}` : '')
   }
 }
